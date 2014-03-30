@@ -655,6 +655,10 @@ class PHP_ParserGenerator_Parser
                     $this->state = self::WAITING_FOR_DECL_ARG;
                     if ('name' == $x) {
                         $this->declargslot = &$this->gp->name;
+                    } elseif ('format' == $x) {
+                        $this->declargslot = &$this->gp->format;
+                    } elseif ('js_classname' == $x) {
+                        $this->declargslot = &$this->gp->js_classname;
                     } elseif ('include' == $x) {
                         $this->declargslot = &$this->gp->include_code;
                         $this->decllnslot = &$this->gp->includeln;

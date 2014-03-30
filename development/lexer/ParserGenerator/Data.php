@@ -303,6 +303,23 @@ class PHP_ParserGenerator_Data
      * @var boolean
      */
     public $has_fallback;
+
+    /**
+     * Output file format 'php'(default) or 'javascript'
+     *
+     * This is set by the %format directive
+     * @var string
+     */
+    public $format;
+
+    /**
+     * Javascript class name
+     *
+     * This is set by the %js_classname directive
+     * @var string
+     */
+    public $js_classname;
+
     /**
      * Name of the program
      * @var string
@@ -967,7 +984,18 @@ class PHP_ParserGenerator_Data
      */
     private function tplt_open()
     {
-        $templatename = dirname(dirname(__FILE__)) . DIRECTORY_SEPARATOR . "Lempar.php";
+        switch($this->format){
+        case "js":
+        case "javascript":
+            $suffix = ".js";
+            break;
+        case "php":
+        default:
+            $suffix = ".php";
+            break;
+        }
+
+        $templatename = dirname(dirname(__FILE__)) . DIRECTORY_SEPARATOR . "Lempar" . $suffix;
         $buf = $this->filenosuffix . '.lt';
         if (file_exists($buf) && is_readable($buf)) {
             $tpltname = $buf;
@@ -1034,7 +1062,16 @@ class PHP_ParserGenerator_Data
      */
     private function tplt_linedir($out, $lineno, $filename)
     {
-        fwrite($out, '#line ' . $lineno . ' "' . $filename . "\"\n");
+        switch($this->format){
+        case "js":
+        case "javascript":
+            fwrite($out, '//line ' . $lineno . ' "' . $filename . "\"\n");
+            break;
+        case "php":
+        default:
+            fwrite($out, '#line ' . $lineno . ' "' . $filename . "\"\n");
+            break;
+        }
     }
 
     /**
@@ -1089,11 +1126,585 @@ class PHP_ParserGenerator_Data
         } while ($progress);
     }
 
+    public function ReportTable($mhflag)
+    {
+        switch($this->format){
+        case "js":
+        case "javascript":
+            return $this->ReportTableJS($mhflag);
+            break;
+        case "php":
+        default:
+            return $this->ReportTablePHP($mhflag);
+            break;
+        }
+    }
+    
     /**
      * Generate C source code for the parser
      * @param int Output in makeheaders format if true
      */
-    public function ReportTable($mhflag)
+    public function ReportTableJS($mhflag)
+    {
+//        FILE *out, *in;
+//        char line[LINESIZE];
+//        int  lineno;
+//        struct state *stp;
+//        struct action *ap;
+//        struct rule *rp;
+//        struct acttab *pActtab;
+//        int i, j, n;
+//        char *name;
+//        int mnTknOfst, mxTknOfst;
+//        int mnNtOfst, mxNtOfst;
+//        struct axset *ax;
+
+        $in = $this->tplt_open();
+        if (!$in) {
+            return;
+        }
+        $out = fopen($this->filenosuffix . ".js", "wb");
+        if (!$out) {
+            fclose($in);
+
+            return;
+        }
+        $this->outname = $this->filenosuffix . ".js";
+        $lineno = 1;
+        $this->tplt_xfer($this->name, $in, $out, $lineno);
+
+        /* Generate the include code, if any */
+        $this->tplt_print($out, $this->include_code, $this->includeln, $lineno);
+        $this->tplt_xfer($this->name, $in, $out, $lineno);
+
+        /* Generate the class declaration code */
+        $this->tplt_print($out, $this->declare_classcode, $this->declare_classln,
+            $lineno);
+        $this->tplt_xfer($this->name, $in, $out, $lineno);
+
+        /* Generate the javascript class define code */
+        fwrite($out, "function $this->js_classname()\n");
+        $lineno++;
+        $this->tplt_xfer($this->name, $in, $out, $lineno);
+
+        /* Generate the internal parser class include code, if any */
+        $this->tplt_print($out, $this->include_classcode, $this->include_classln,
+            $lineno);
+        $this->tplt_xfer($this->name, $in, $out, $lineno);
+
+        /* Generate #defines for all tokens */
+        //if ($mhflag) {
+            //fprintf($out, "#if INTERFACE\n");
+            //$lineno++;
+            if ($this->tokenprefix) {
+                $prefix = $this->tokenprefix;
+            } else {
+                $prefix = '';
+            }
+            for ($i = 1; $i < $this->nterminal; $i++) {
+                fprintf($out, "    self.%s%-30s = %2d;\n", $prefix, $this->symbols[$i]->name, $i);
+                $lineno++;
+            }
+            //fwrite($out, "#endif\n");
+            //$lineno++;
+        //}
+        fwrite($out, "    self.YY_NO_ACTION = " .
+            ($this->nstate + $this->nrule + 2) . ";\n");
+        $lineno++;
+        fwrite($out, "    self.YY_ACCEPT_ACTION = " .
+            ($this->nstate + $this->nrule + 1) . ";\n");
+        $lineno++;
+        fwrite($out, "    self.YY_ERROR_ACTION = " .
+            ($this->nstate + $this->nrule) . ";\n");
+        $lineno++;
+        $this->tplt_xfer($this->name, $in, $out, $lineno);
+
+        /* Generate the action table and its associates:
+        **
+        **  yy_action[]        A single table containing all actions.
+        **  yy_lookahead[]     A table containing the lookahead for each entry in
+        **                     yy_action.  Used to detect hash collisions.
+        **  yy_shift_ofst[]    For each state, the offset into yy_action for
+        **                     shifting terminals.
+        **  yy_reduce_ofst[]   For each state, the offset into yy_action for
+        **                     shifting non-terminals after a reduce.
+        **  yy_default[]       Default action for each state.
+        */
+
+        /* Compute the actions on all states and count them up */
+
+        $ax = array();
+        for ($i = 0; $i < $this->nstate; $i++) {
+            $stp = $this->sorted[$i];
+            $ax[$i * 2] = array();
+            $ax[$i * 2]['stp'] = $stp;
+            $ax[$i * 2]['isTkn'] = 1;
+            $ax[$i * 2]['nAction'] = $stp->nTknAct;
+            $ax[$i * 2 + 1] = array();
+            $ax[$i * 2 + 1]['stp'] = $stp;
+            $ax[$i * 2 + 1]['isTkn'] = 0;
+            $ax[$i * 2 + 1]['nAction'] = $stp->nNtAct;
+        }
+        $mxTknOfst = $mnTknOfst = 0;
+        $mxNtOfst = $mnNtOfst = 0;
+
+        /* Compute the action table.  In order to try to keep the size of the
+        ** action table to a minimum, the heuristic of placing the largest action
+        ** sets first is used.
+        */
+
+        usort($ax, array('PHP_ParserGenerator_Data', 'axset_compare'));
+        $pActtab = new PHP_ParserGenerator_ActionTable;
+        for ($i = 0; $i < $this->nstate * 2 && $ax[$i]['nAction'] > 0; $i++) {
+            $stp = $ax[$i]['stp'];
+            if ($ax[$i]['isTkn']) {
+                for ($ap = $stp->ap; $ap; $ap = $ap->next) {
+                    if ($ap->sp->index >= $this->nterminal) {
+                        continue;
+                    }
+                    $action = $this->compute_action($ap);
+                    if ($action < 0) {
+                        continue;
+                    }
+                    $pActtab->acttab_action($ap->sp->index, $action);
+                }
+                $stp->iTknOfst = $pActtab->acttab_insert();
+                if ($stp->iTknOfst < $mnTknOfst) {
+                    $mnTknOfst = $stp->iTknOfst;
+                }
+                if ($stp->iTknOfst > $mxTknOfst) {
+                    $mxTknOfst = $stp->iTknOfst;
+                }
+            } else {
+                for ($ap = $stp->ap; $ap; $ap = $ap->next) {
+                    if ($ap->sp->index < $this->nterminal) {
+                        continue;
+                    }
+                    if ($ap->sp->index == $this->nsymbol) {
+                        continue;
+                    }
+                    $action = $this->compute_action($ap);
+                    if ($action < 0) {
+                        continue;
+                    }
+                    $pActtab->acttab_action($ap->sp->index, $action);
+                }
+                $stp->iNtOfst = $pActtab->acttab_insert();
+                if ($stp->iNtOfst < $mnNtOfst) {
+                    $mnNtOfst = $stp->iNtOfst;
+                }
+                if ($stp->iNtOfst > $mxNtOfst) {
+                    $mxNtOfst = $stp->iNtOfst;
+                }
+            }
+        }
+        /* Output the yy_action table */
+
+        fprintf($out, "    self.YY_SZ_ACTTAB = %d;\n", $pActtab->nAction);
+        $lineno++;
+        fwrite($out, "self.yy_action = [\n");
+        $lineno++;
+        $n = $pActtab->nAction;
+        for ($i = $j = 0; $i < $n; $i++) {
+            $action = $pActtab->aAction[$i]['action'];
+            if ($action < 0) {
+                $action = $this->nsymbol + $this->nrule + 2;
+            }
+            // change next line
+            if ($j === 0) {
+                fprintf($out, " /* %5d */ ", $i);
+            }
+            fprintf($out, " %4d,", $action);
+            if ($j == 9 || $i == $n - 1) {
+                fwrite($out, "\n");
+                $lineno++;
+                $j = 0;
+            } else {
+                $j++;
+            }
+        }
+        fwrite($out, "    ];\n"); $lineno++;
+
+        /* Output the yy_lookahead table */
+
+        fwrite($out, "    self.yy_lookahead = [\n");
+        $lineno++;
+        for ($i = $j = 0; $i < $n; $i++) {
+            $la = $pActtab->aAction[$i]['lookahead'];
+            if ($la < 0) {
+                $la = $this->nsymbol;
+            }
+            // change next line
+            if ($j === 0) {
+                fprintf($out, " /* %5d */ ", $i);
+            }
+            fprintf($out, " %4d,", $la);
+            if ($j == 9 || $i == $n - 1) {
+                fwrite($out, "\n");
+                $lineno++;
+                $j = 0;
+            } else {
+                $j++;
+            }
+        }
+        fwrite($out, "    ];\n"); $lineno++;
+
+        /* Output the yy_shift_ofst[] table */
+        fprintf($out, "    self.YY_SHIFT_USE_DFLT = %d;\n", $mnTknOfst - 1);
+        $lineno++;
+        $n = $this->nstate;
+        while ($n > 0 && $this->sorted[$n - 1]->iTknOfst == PHP_ParserGenerator_Data::NO_OFFSET) {
+            $n--;
+        }
+        fprintf($out, "    self.YY_SHIFT_MAX = %d;\n", $n - 1);
+        $lineno++;
+        fwrite($out, "    self.yy_shift_ofst = [\n");
+        $lineno++;
+        for ($i = $j = 0; $i < $n; $i++) {
+            $stp = $this->sorted[$i];
+            $ofst = $stp->iTknOfst;
+            if ($ofst === PHP_ParserGenerator_Data::NO_OFFSET) {
+                $ofst = $mnTknOfst - 1;
+            }
+            // change next line
+            if ($j === 0) {
+                fprintf($out, " /* %5d */ ", $i);
+            }
+            fprintf($out, " %4d,", $ofst);
+            if ($j == 9 || $i == $n - 1) {
+                fwrite($out, "\n");
+                $lineno++;
+                $j = 0;
+            } else {
+                $j++;
+            }
+        }
+        fwrite($out, "    ];\n"); $lineno++;
+
+        /* Output the yy_reduce_ofst[] table */
+
+        fprintf($out, "    self.YY_REDUCE_USE_DFLT = %d;\n", $mnNtOfst - 1);
+        $lineno++;
+        $n = $this->nstate;
+        while ($n > 0 && $this->sorted[$n - 1]->iNtOfst == PHP_ParserGenerator_Data::NO_OFFSET) {
+            $n--;
+        }
+        fprintf($out, "    self.YY_REDUCE_MAX = %d;\n", $n - 1);
+        $lineno++;
+        fwrite($out, "    self.yy_reduce_ofst = [\n");
+        $lineno++;
+        for ($i = $j = 0; $i < $n; $i++) {
+            $stp = $this->sorted[$i];
+            $ofst = $stp->iNtOfst;
+            if ($ofst == PHP_ParserGenerator_Data::NO_OFFSET) {
+                $ofst = $mnNtOfst - 1;
+            }
+            // change next line
+            if ($j == 0) {
+                fprintf($out, " /* %5d */ ", $i);
+            }
+            fprintf($out, " %4d,", $ofst);
+            if ($j == 9 || $i == $n - 1) {
+                fwrite($out, "\n");
+                $lineno++;
+                $j = 0;
+            } else {
+                $j++;
+            }
+        }
+        fwrite($out, "    ];\n"); $lineno++;
+
+        /* Output the expected tokens table */
+
+        fwrite($out, "    self.yyExpectedTokens = [\n");
+        $lineno++;
+        for ($i = 0; $i < $this->nstate; $i++) {
+            $stp = $this->sorted[$i];
+            fwrite($out, "        /* $i */ [");
+            for ($ap = $stp->ap; $ap; $ap = $ap->next) {
+                if ($ap->sp->index < $this->nterminal) {
+                    if ($ap->type == PHP_ParserGenerator_Action::SHIFT ||
+                          $ap->type == PHP_ParserGenerator_Action::REDUCE) {
+                        fwrite($out, $ap->sp->index . ', ');
+                    }
+                }
+            }
+            fwrite($out, "],\n");
+            $lineno++;
+        }
+        fwrite($out, "    ];\n"); $lineno++;
+
+        /* Output the default action table */
+
+        fwrite($out, "    self.yy_default = [\n");
+        $lineno++;
+        $n = $this->nstate;
+        for ($i = $j = 0; $i < $n; $i++) {
+            $stp = $this->sorted[$i];
+            // change next line
+            if ($j == 0) {
+                fprintf($out, " /* %5d */ ", $i);
+            }
+            fprintf($out, " %4d,", $stp->iDflt);
+            if ($j == 9 || $i == $n - 1) {
+                fprintf($out, "\n"); $lineno++;
+                $j = 0;
+            } else {
+                $j++;
+            }
+        }
+        fwrite($out, "    ];\n"); $lineno++;
+        $this->tplt_xfer($this->name, $in, $out, $lineno);
+
+        /* Generate the defines */
+        fprintf($out, "    self.YYNOCODE = %d;\n", $this->nsymbol + 1);
+        $lineno++;
+        if ($this->stacksize) {
+            if ($this->stacksize <= 0) {
+                PHP_ParserGenerator::ErrorMsg($this->filename, 0,
+                    "Illegal stack size: [%s].  The stack size should be an integer constant.",
+                    $this->stacksize);
+                $this->errorcnt++;
+                $this->stacksize = "100";
+            }
+            fprintf($out, "    self.YYSTACKDEPTH = %s;\n", $this->stacksize);
+            $lineno++;
+        } else {
+            fwrite($out,"    self.YYSTACKDEPTH = 100;\n");
+            $lineno++;
+        }
+        fprintf($out, "    self.YYNSTATE = %d;\n", $this->nstate);
+        $lineno++;
+        fprintf($out, "    self.YYNRULE = %d;\n", $this->nrule);
+        $lineno++;
+        fprintf($out, "    self.YYERRORSYMBOL = %d;\n", $this->errsym->index);
+        $lineno++;
+        fprintf($out, "    self.YYERRSYMDT = 'yy%d';\n", $this->errsym->dtnum);
+        $lineno++;
+        if ($this->has_fallback) {
+            fwrite($out, "    self.YYFALLBACK = 1;\n");
+        } else {
+            fwrite($out, "    self.YYFALLBACK = 0;\n");
+        }
+        $lineno++;
+        $this->tplt_xfer($this->name, $in, $out, $lineno);
+
+        /* Generate the table of fallback tokens.
+        */
+
+        if ($this->has_fallback) {
+            for ($i = 0; $i < $this->nterminal; $i++) {
+                $p = $this->symbols[$i];
+                if ($p->fallback === 0) {
+                    // change next line
+                    fprintf($out, "    0,  /* %10s => nothing */\n", $p->name);
+                } else {
+                    // change next line
+                    fprintf($out, "  %3d,  /* %10s => %s */\n",
+                        $p->fallback->index, $p->name, $p->fallback->name);
+                }
+                $lineno++;
+            }
+        }
+        $this->tplt_xfer($this->name, $in, $out, $lineno);
+
+        /* Generate a table containing the symbolic name of every symbol
+            ($yyTokenName)
+        */
+
+        for ($i = 0; $i < $this->nsymbol; $i++) {
+            fprintf($out,"  %-15s", "'" . $this->symbols[$i]->name . "',");
+            if (($i & 3) == 3) {
+                fwrite($out,"\n");
+                $lineno++;
+            }
+        }
+        if (($i & 3) != 0) {
+            fwrite($out, "\n");
+            $lineno++;
+        }
+        $this->tplt_xfer($this->name, $in, $out, $lineno);
+
+        /* Generate a table containing a text string that describes every
+        ** rule in the rule set of the grammer.  This information is used
+        ** when tracing REDUCE actions.
+        */
+
+        for ($i = 0, $rp = $this->rule; $rp; $rp = $rp->next, $i++) {
+            if ($rp->index !== $i) {
+                throw new Exception('rp->index != i and should be');
+            }
+            // change next line
+            fprintf($out, " /* %3d */ \"%s ::=", $i, $rp->lhs->name);
+            for ($j = 0; $j < $rp->nrhs; $j++) {
+                $sp = $rp->rhs[$j];
+                fwrite($out,' ' . $sp->name);
+                if ($sp->type == PHP_ParserGenerator_Symbol::MULTITERMINAL) {
+                    for ($k = 1; $k < $sp->nsubsym; $k++) {
+                        fwrite($out, '|' . $sp->subsym[$k]->name);
+                    }
+                }
+            }
+            fwrite($out, "\",\n");
+            $lineno++;
+        }
+        $this->tplt_xfer($this->name, $in, $out, $lineno);
+
+        /* Generate code which executes every time a symbol is popped from
+        ** the stack while processing errors or while destroying the parser.
+        ** (In other words, generate the %destructor actions)
+        */
+
+        if ($this->tokendest) {
+            for ($i = 0; $i < $this->nsymbol; $i++) {
+                $sp = $this->symbols[$i];
+                if ($sp === 0 || $sp->type != PHP_ParserGenerator_Symbol::TERMINAL) {
+                    continue;
+                }
+                fprintf($out, "    case %d:\n", $sp->index);
+                $lineno++;
+            }
+            for ($i = 0; $i < $this->nsymbol &&
+                         $this->symbols[$i]->type != PHP_ParserGenerator_Symbol::TERMINAL; $i++);
+            if ($i < $this->nsymbol) {
+                $this->emit_destructor_code($out, $this->symbols[$i], $lineno);
+                fprintf($out, "      break;\n");
+                $lineno++;
+            }
+        }
+        if ($this->vardest) {
+            $dflt_sp = 0;
+            for ($i = 0; $i < $this->nsymbol; $i++) {
+                $sp = $this->symbols[$i];
+                if ($sp === 0 || $sp->type == PHP_ParserGenerator_Symbol::TERMINAL ||
+                      $sp->index <= 0 || $sp->destructor != 0) {
+                    continue;
+                }
+                fprintf($out, "    case %d:\n", $sp->index);
+                $lineno++;
+                $dflt_sp = $sp;
+            }
+            if ($dflt_sp != 0) {
+                $this->emit_destructor_code($out, $dflt_sp, $lineno);
+                fwrite($out, "      break;\n");
+                $lineno++;
+            }
+        }
+        for ($i = 0; $i < $this->nsymbol; $i++) {
+            $sp = $this->symbols[$i];
+            if ($sp === 0 || $sp->type == PHP_ParserGenerator_Symbol::TERMINAL ||
+                  $sp->destructor === 0) {
+                continue;
+            }
+            fprintf($out, "    case %d:\n", $sp->index);
+            $lineno++;
+
+            /* Combine duplicate destructors into a single case */
+
+            for ($j = $i + 1; $j < $this->nsymbol; $j++) {
+                $sp2 = $this->symbols[$j];
+                if ($sp2 && $sp2->type != PHP_ParserGenerator_Symbol::TERMINAL && $sp2->destructor
+                      && $sp2->dtnum == $sp->dtnum
+                      && $sp->destructor == $sp2->destructor) {
+                    fprintf($out, "    case %d:\n", $sp2->index);
+                    $lineno++;
+                    $sp2->destructor = 0;
+                }
+            }
+
+            $this->emit_destructor_code($out, $this->symbols[$i], $lineno);
+            fprintf($out, "      break;\n");
+            $lineno++;
+        }
+        $this->tplt_xfer($this->name, $in, $out, $lineno);
+
+        /* Generate code which executes whenever the parser stack overflows */
+
+        $this->tplt_print($out, $this->overflow, $this->overflowln, $lineno);
+        $this->tplt_xfer($this->name, $in, $out, $lineno);
+
+        /* Generate the table of rule information
+        **
+        ** Note: This code depends on the fact that rules are number
+        ** sequentually beginning with 0.
+        */
+
+        for ($rp = $this->rule; $rp; $rp = $rp->next) {
+            fprintf($out, "  { 'lhs' : %d, 'rhs' : %d },\n",
+                $rp->lhs->index, $rp->nrhs);
+            $lineno++;
+        }
+        $this->tplt_xfer($this->name, $in, $out, $lineno);
+
+        /* Generate code which executes during each REDUCE action */
+
+        for ($rp = $this->rule; $rp; $rp = $rp->next) {
+            if ($rp->code) {
+                $this->translate_code($rp);
+            }
+        }
+
+        /* Generate the method map for each REDUCE action */
+
+        for ($rp = $this->rule; $rp; $rp = $rp->next) {
+            if ($rp->code === 0) {
+                continue;
+            }
+            fwrite($out, '        "' . $rp->index . '" : ' . $rp->index . ",\n");
+            $lineno++;
+            for ($rp2 = $rp->next; $rp2; $rp2 = $rp2->next) {
+                if ($rp2->code === $rp->code) {
+                    fwrite($out, '        "' . $rp2->index . '" : ' .
+                        $rp->index . ",\n");
+                    $lineno++;
+                    $rp2->code = 0;
+                }
+            }
+        }
+        $this->tplt_xfer($this->name, $in, $out, $lineno);
+
+        for ($rp = $this->rule; $rp; $rp = $rp->next) {
+            if ($rp->code === 0) {
+                continue;
+            }
+            $this->emit_js_code($out, $rp, $lineno);
+        }
+        $this->tplt_xfer($this->name, $in, $out, $lineno);
+
+        /* Generate code which executes if a parse fails */
+
+        $this->tplt_print($out, $this->failure, $this->failureln, $lineno);
+        $this->tplt_xfer($this->name, $in, $out, $lineno);
+
+        /* Generate code which executes when a syntax error occurs */
+
+        $this->tplt_print($out, $this->error, $this->errorln, $lineno);
+        $this->tplt_xfer($this->name, $in, $out, $lineno);
+
+        /* Generate code which executes when the parser accepts its input */
+
+        $this->tplt_print($out, $this->accept, $this->acceptln, $lineno);
+        $this->tplt_xfer($this->name, $in, $out, $lineno);
+
+        /* Generate javascript init function arguments */
+
+        fwrite($out, "($this->js_classname, $this->js_classname.prototype)\n");
+        $lineno++;
+        $this->tplt_xfer($this->name, $in, $out, $lineno);
+
+        /* Append any addition code the user desires */
+
+        $this->tplt_print($out, $this->extracode, $this->extracodeln, $lineno);
+
+        fclose($in);
+        fclose($out);
+    }
+
+    /**
+     * Generate C source code for the parser
+     * @param int Output in makeheaders format if true
+     */
+    public function ReportTablePHP($mhflag)
     {
 //        FILE *out, *in;
 //        char line[LINESIZE];
@@ -1643,6 +2254,24 @@ class PHP_ParserGenerator_Data
         fclose($out);
     }
 
+    /**
+     * Generate code which executes when the rule "rp" is reduced.  Write
+     * the code to "out".  Make sure lineno stays up-to-date.
+     */
+    public function emit_js_code($out, PHP_ParserGenerator_Rule $rp, &$lineno)
+    {
+        $linecnt = 0;
+
+        /* Generate code to do the reduce action */
+        if ($rp->code) {
+            $this->tplt_linedir($out, $rp->line, $this->filename);
+            fwrite($out, "    proto.yy_r$rp->index = function(){" . $rp->code);
+            $linecnt += count(explode("\n", $rp->code)) - 1;
+            $lineno += 3 + $linecnt;
+            fwrite($out, "    };\n");
+            $this->tplt_linedir($out, $lineno, $this->outname);
+        } /* End if( rp->code ) */
+    }
     /**
      * Generate code which executes when the rule "rp" is reduced.  Write
      * the code to "out".  Make sure lineno stays up-to-date.
