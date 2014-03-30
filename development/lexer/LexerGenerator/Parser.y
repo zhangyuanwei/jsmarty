@@ -289,8 +289,8 @@ require_once './LexerGenerator/Exception.php';
             yy_global_pattern.lastIndex = ' . $this->counter . ';
             var result = yy_global_pattern.exec(' . $this->input . ');
             if(result){
-                var yymatches = result[0], yysubmatches = [];
-                if (!yymatches) {
+                var yymatches = result, yysubmatches = [];
+                if (!yymatches[0]) {
                     throw new Error(\'Error: lexing failed because a rule matched\' +
                         \' an empty string.  Input "\' + ' . $this->input . '
                         .substr(' . $this->counter . ', 5) + \'..." state:' . $statename . '\');
@@ -310,7 +310,7 @@ require_once './LexerGenerator/Exception.php';
                 var r = this[\'yy_r' . $ruleindex . '_\' + ' . $this->token . '](yysubmatches);
                 if (r === undefined) {
                     ' . $this->counter . ' += ' . $this->value . '.length;
-                    ' . $this->line . ' += ' . $this->value . '.splice("\n").length  - 1;
+                    ' . $this->line . ' += ' . $this->value . '.split("\n").length  - 1;
                     // accept this token
                     return true;
                 } else if (r === true) {
@@ -319,7 +319,7 @@ require_once './LexerGenerator/Exception.php';
                     return this.yylex();
                 } else if (r === false) {
                     ' . $this->counter . ' += ' . $this->value . '.length;
-                    ' . $this->line . ' += ' . $this->value . '.splice("\n").length  - 1;
+                    ' . $this->line . ' += ' . $this->value . '.split("\n").length  - 1;
                     if (' . $this->counter . ' >= ' . $this->input . '.length) {
                         return false; // end of input
                     }

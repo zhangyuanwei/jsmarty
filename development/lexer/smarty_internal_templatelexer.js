@@ -148,8 +148,8 @@ function Smarty_Internal_Templatelexer(data, compiler) {
             yy_global_pattern.lastIndex = this.counter;
             var result = yy_global_pattern.exec(this.data);
             if(result){
-                var yymatches = result[0], yysubmatches = [];
-                if (!yymatches) {
+                var yymatches = result, yysubmatches = [];
+                if (!yymatches[0]) {
                     throw new Error('Error: lexing failed because a rule matched' +
                         ' an empty string.  Input "' + this.data
                         .substr(this.counter, 5) + '..." state:TEXT');
@@ -169,7 +169,7 @@ function Smarty_Internal_Templatelexer(data, compiler) {
                 var r = this['yy_r1_' + this.token](yysubmatches);
                 if (r === undefined) {
                     this.counter += this.value.length;
-                    this.line += this.value.splice("\n").length  - 1;
+                    this.line += this.value.split("\n").length  - 1;
                     // accept this token
                     return true;
                 } else if (r === true) {
@@ -178,7 +178,7 @@ function Smarty_Internal_Templatelexer(data, compiler) {
                     return this.yylex();
                 } else if (r === false) {
                     this.counter += this.value.length;
-                    this.line += this.value.splice("\n").length  - 1;
+                    this.line += this.value.split("\n").length  - 1;
                     if (this.counter >= this.data.length) {
                         return false; // end of input
                     }
@@ -359,8 +359,8 @@ function Smarty_Internal_Templatelexer(data, compiler) {
             yy_global_pattern.lastIndex = this.counter;
             var result = yy_global_pattern.exec(this.data);
             if(result){
-                var yymatches = result[0], yysubmatches = [];
-                if (!yymatches) {
+                var yymatches = result, yysubmatches = [];
+                if (!yymatches[0]) {
                     throw new Error('Error: lexing failed because a rule matched' +
                         ' an empty string.  Input "' + this.data
                         .substr(this.counter, 5) + '..." state:SMARTY');
@@ -380,7 +380,7 @@ function Smarty_Internal_Templatelexer(data, compiler) {
                 var r = this['yy_r2_' + this.token](yysubmatches);
                 if (r === undefined) {
                     this.counter += this.value.length;
-                    this.line += this.value.splice("\n").length  - 1;
+                    this.line += this.value.split("\n").length  - 1;
                     // accept this token
                     return true;
                 } else if (r === true) {
@@ -389,7 +389,7 @@ function Smarty_Internal_Templatelexer(data, compiler) {
                     return this.yylex();
                 } else if (r === false) {
                     this.counter += this.value.length;
-                    this.line += this.value.splice("\n").length  - 1;
+                    this.line += this.value.split("\n").length  - 1;
                     if (this.counter >= this.data.length) {
                         return false; // end of input
                     }
@@ -795,8 +795,8 @@ function Smarty_Internal_Templatelexer(data, compiler) {
             yy_global_pattern.lastIndex = this.counter;
             var result = yy_global_pattern.exec(this.data);
             if(result){
-                var yymatches = result[0], yysubmatches = [];
-                if (!yymatches) {
+                var yymatches = result, yysubmatches = [];
+                if (!yymatches[0]) {
                     throw new Error('Error: lexing failed because a rule matched' +
                         ' an empty string.  Input "' + this.data
                         .substr(this.counter, 5) + '..." state:LITERAL');
@@ -816,7 +816,7 @@ function Smarty_Internal_Templatelexer(data, compiler) {
                 var r = this['yy_r3_' + this.token](yysubmatches);
                 if (r === undefined) {
                     this.counter += this.value.length;
-                    this.line += this.value.splice("\n").length  - 1;
+                    this.line += this.value.split("\n").length  - 1;
                     // accept this token
                     return true;
                 } else if (r === true) {
@@ -825,7 +825,7 @@ function Smarty_Internal_Templatelexer(data, compiler) {
                     return this.yylex();
                 } else if (r === false) {
                     this.counter += this.value.length;
-                    this.line += this.value.splice("\n").length  - 1;
+                    this.line += this.value.split("\n").length  - 1;
                     if (this.counter >= this.data.length) {
                         return false; // end of input
                     }
@@ -917,8 +917,8 @@ function Smarty_Internal_Templatelexer(data, compiler) {
             yy_global_pattern.lastIndex = this.counter;
             var result = yy_global_pattern.exec(this.data);
             if(result){
-                var yymatches = result[0], yysubmatches = [];
-                if (!yymatches) {
+                var yymatches = result, yysubmatches = [];
+                if (!yymatches[0]) {
                     throw new Error('Error: lexing failed because a rule matched' +
                         ' an empty string.  Input "' + this.data
                         .substr(this.counter, 5) + '..." state:DOUBLEQUOTEDSTRING');
@@ -938,7 +938,7 @@ function Smarty_Internal_Templatelexer(data, compiler) {
                 var r = this['yy_r4_' + this.token](yysubmatches);
                 if (r === undefined) {
                     this.counter += this.value.length;
-                    this.line += this.value.splice("\n").length  - 1;
+                    this.line += this.value.split("\n").length  - 1;
                     // accept this token
                     return true;
                 } else if (r === true) {
@@ -947,7 +947,7 @@ function Smarty_Internal_Templatelexer(data, compiler) {
                     return this.yylex();
                 } else if (r === false) {
                     this.counter += this.value.length;
-                    this.line += this.value.splice("\n").length  - 1;
+                    this.line += this.value.split("\n").length  - 1;
                     if (this.counter >= this.data.length) {
                         return false; // end of input
                     }
@@ -1077,8 +1077,8 @@ function Smarty_Internal_Templatelexer(data, compiler) {
             yy_global_pattern.lastIndex = this.counter;
             var result = yy_global_pattern.exec(this.data);
             if(result){
-                var yymatches = result[0], yysubmatches = [];
-                if (!yymatches) {
+                var yymatches = result, yysubmatches = [];
+                if (!yymatches[0]) {
                     throw new Error('Error: lexing failed because a rule matched' +
                         ' an empty string.  Input "' + this.data
                         .substr(this.counter, 5) + '..." state:CHILDBODY');
@@ -1098,7 +1098,7 @@ function Smarty_Internal_Templatelexer(data, compiler) {
                 var r = this['yy_r5_' + this.token](yysubmatches);
                 if (r === undefined) {
                     this.counter += this.value.length;
-                    this.line += this.value.splice("\n").length  - 1;
+                    this.line += this.value.split("\n").length  - 1;
                     // accept this token
                     return true;
                 } else if (r === true) {
@@ -1107,7 +1107,7 @@ function Smarty_Internal_Templatelexer(data, compiler) {
                     return this.yylex();
                 } else if (r === false) {
                     this.counter += this.value.length;
-                    this.line += this.value.splice("\n").length  - 1;
+                    this.line += this.value.split("\n").length  - 1;
                     if (this.counter >= this.data.length) {
                         return false; // end of input
                     }
@@ -1185,8 +1185,8 @@ function Smarty_Internal_Templatelexer(data, compiler) {
             yy_global_pattern.lastIndex = this.counter;
             var result = yy_global_pattern.exec(this.data);
             if(result){
-                var yymatches = result[0], yysubmatches = [];
-                if (!yymatches) {
+                var yymatches = result, yysubmatches = [];
+                if (!yymatches[0]) {
                     throw new Error('Error: lexing failed because a rule matched' +
                         ' an empty string.  Input "' + this.data
                         .substr(this.counter, 5) + '..." state:CHILDBLOCK');
@@ -1206,7 +1206,7 @@ function Smarty_Internal_Templatelexer(data, compiler) {
                 var r = this['yy_r6_' + this.token](yysubmatches);
                 if (r === undefined) {
                     this.counter += this.value.length;
-                    this.line += this.value.splice("\n").length  - 1;
+                    this.line += this.value.split("\n").length  - 1;
                     // accept this token
                     return true;
                 } else if (r === true) {
@@ -1215,7 +1215,7 @@ function Smarty_Internal_Templatelexer(data, compiler) {
                     return this.yylex();
                 } else if (r === false) {
                     this.counter += this.value.length;
-                    this.line += this.value.splice("\n").length  - 1;
+                    this.line += this.value.split("\n").length  - 1;
                     if (this.counter >= this.data.length) {
                         return false; // end of input
                     }
