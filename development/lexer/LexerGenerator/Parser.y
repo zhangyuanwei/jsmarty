@@ -45,15 +45,15 @@
  * @author     Gregory Beaver <cellog@php.net>
  * @copyright  2006 Gregory Beaver
  * @license    http://www.opensource.org/licenses/bsd-license.php New BSD License
- * @version    CVS: $Id: Parser.y 246683 2007-11-22 04:43:52Z instance $
+ * @version    CVS: $Id: Parser.php 246683 2007-11-22 04:43:52Z instance $
  * @since      File available since Release 0.1.0
  */
 /**
  * For regular expression validation
  */
-require_once 'PHP/LexerGenerator/Regex/Lexer.php';
-require_once 'PHP/LexerGenerator/Regex/Parser.php';
-require_once 'PHP/LexerGenerator/Exception.php';
+require_once './LexerGenerator/Regex/Lexer.php';
+require_once './LexerGenerator/Regex/Parser.php';
+require_once './LexerGenerator/Exception.php';
 /**
  * Token parser for plex files.
  *
@@ -109,7 +109,7 @@ require_once 'PHP/LexerGenerator/Exception.php';
         9 => self::PI,
     );
 
-    function __construct($outfile, $lex)
+    public function __construct($outfile, $lex)
     {
         $this->out = fopen($outfile, 'wb');
         if (!$this->out) {
@@ -120,7 +120,7 @@ require_once 'PHP/LexerGenerator/Exception.php';
         $this->_regexParser = new PHP_LexerGenerator_Regex_Parser($this->_regexLexer);
     }
 
-    function doLongestMatch($rules, $statename, $ruleindex)
+    public function doLongestMatch($rules, $statename, $ruleindex)
     {
         fwrite($this->out, '
         if (' . $this->counter . ' >= strlen(' . $this->input . ')) {
@@ -220,6 +220,7 @@ require_once 'PHP/LexerGenerator/Exception.php';
                     // accept
                     ' . $this->counter . ' += strlen(' . $this->value . ');
                     ' . $this->line . ' += substr_count(' . $this->value . ', "\n");
+
                     return true;
                 }
             }
@@ -227,7 +228,7 @@ require_once 'PHP/LexerGenerator/Exception.php';
 ');
     }
 
-    function doFirstMatch($rules, $statename, $ruleindex)
+    public function doFirstMatch($rules, $statename, $ruleindex)
     {
         $patterns = array();
         $pattern = '/';
@@ -251,15 +252,17 @@ require_once 'PHP/LexerGenerator/Exception.php';
         $pattern .= '/' . $this->patternFlags;
         fwrite($this->out, '
         $tokenMap = ' . $tokenindex . ';
-        if (' . $this->counter . ' >= strlen(' . $this->input . ')) {
+        if (' . $this->counter . ' >= ($this->mbstring_overload ? mb_strlen(' . $this->input . ',\'latin1\'): strlen(' . $this->input . '))) {
             return false; // end of input
         }
         ');
-        fwrite($this->out, '$yy_global_pattern = \'' .
-            $pattern . '\';' . "\n");
+        fwrite($this->out, '$yy_global_pattern = "' .
+            $pattern . 'iS";' . "\n");
         fwrite($this->out, '
         do {
-            if (preg_match($yy_global_pattern,' . $this->input . ', $yymatches, null, ' .
+            if ($this->mbstring_overload ? preg_match($yy_global_pattern, mb_substr(' . $this->input . ', ' .
+             $this->counter .
+                    ',2000000000,\'latin1\'), $yymatches) : preg_match($yy_global_pattern,' . $this->input . ', $yymatches, null, ' .
              $this->counter .
                     ')) {
                 $yysubmatches = $yymatches;
@@ -281,7 +284,7 @@ require_once 'PHP/LexerGenerator/Exception.php';
                 ' . $this->value . ' = current($yymatches); // token value
                 $r = $this->{\'yy_r' . $ruleindex . '_\' . ' . $this->token . '}($yysubmatches);
                 if ($r === null) {
-                    ' . $this->counter . ' += strlen(' . $this->value . ');
+                    ' . $this->counter . ' += ($this->mbstring_overload ? mb_strlen(' . $this->value . ',\'latin1\'): strlen(' . $this->value . '));
                     ' . $this->line . ' += substr_count(' . $this->value . ', "\n");
                     // accept this token
                     return true;
@@ -290,18 +293,18 @@ require_once 'PHP/LexerGenerator/Exception.php';
                     // process this token in the new state
                     return $this->yylex();
                 } elseif ($r === false) {
-                    ' . $this->counter . ' += strlen(' . $this->value . ');
+                    ' . $this->counter . ' += ($this->mbstring_overload ? mb_strlen(' . $this->value . ',\'latin1\'): strlen(' . $this->value . '));
                     ' . $this->line . ' += substr_count(' . $this->value . ', "\n");
-                    if (' . $this->counter . ' >= strlen(' . $this->input . ')) {
+                    if (' . $this->counter . ' >= ($this->mbstring_overload ? mb_strlen(' . $this->input . ',\'latin1\'): strlen(' . $this->input . '))) {
                         return false; // end of input
                     }
                     // skip this token
                     continue;
-                } else {');
-        fwrite($this->out, '
-                    $yy_yymore_patterns = array(' . "\n");
+                }');
+//                } else {');
+/**        fwrite($this->out, '                    $yy_yymore_patterns = array(' . "\n");
         $extra = 0;
-        for($i = 0; count($patterns); $i++) {
+        for ($i = 0; count($patterns); $i++) {
             unset($patterns[$i]);
             $extra += $tokencount[0];
             array_shift($tokencount);
@@ -339,21 +342,23 @@ require_once 'PHP/LexerGenerator/Exception.php';
                         // process this token in the new state
                         return $this->yylex();
                     } elseif ($r === false) {
-                        ' . $this->counter . ' += strlen(' . $this->value . ');
+                        ' . $this->counter . ' += ($this->mbstring_overload ? mb_strlen(' . $this->value . ',\'latin1\'): strlen(' . $this->value . '));
                         ' . $this->line . ' += substr_count(' . $this->value . ', "\n");
-                        if (' . $this->counter . ' >= strlen(' . $this->input . ')) {
+                        if (' . $this->counter . ' >= ($this->mbstring_overload ? mb_strlen(' . $this->input . ',\'latin1\'): strlen(' . $this->input . '))) {
                             return false; // end of input
                         }
                         // skip this token
                         continue;
                     } else {
                         // accept
-                        ' . $this->counter . ' += strlen(' . $this->value . ');
+                        ' . $this->counter . ' += ($this->mbstring_overload ? mb_strlen(' . $this->value . ',\'latin1\'): strlen(' . $this->value . '));
                         ' . $this->line . ' += substr_count(' . $this->value . ', "\n");
+
                         return true;
                     }
                 }
-            } else {
+*/
+       fwrite($this->out, '            } else {
                 throw new Exception(\'Unexpected input at line\' . ' . $this->line . ' .
                     \': \' . ' . $this->input . '[' . $this->counter . ']);
             }
@@ -362,18 +367,18 @@ require_once 'PHP/LexerGenerator/Exception.php';
 ');
     }
 
-    function makeCaseInsensitve($string)
+    public function makeCaseInsensitve($string)
     {
         return preg_replace('/[a-z]/ie', "'[\\0'.strtoupper('\\0').']'", strtolower($string));
     }
 
-    function outputRules($rules, $statename)
+    public function outputRules($rules, $statename)
     {
         if (!$statename) {
             $statename = $this -> _outRuleIndex;
         }
         fwrite($this->out, '
-    function yylex' . $this -> _outRuleIndex . '()
+    public function yylex' . $this -> _outRuleIndex . '()
     {');
         if ($this->matchlongest) {
             $ruleMap = array();
@@ -410,12 +415,12 @@ require_once 'PHP/LexerGenerator/Exception.php';
         $this -> _outRuleIndex++; // for next set of rules
     }
 
-    function error($msg)
+    public function error($msg)
     {
         echo 'Error on line ' . $this->lex->line . ': ' , $msg;
     }
 
-    function _validatePattern($pattern, $update = false)
+    public function _validatePattern($pattern, $update = false)
     {
         $this->_regexLexer->reset($pattern, $this->lex->line);
         $this->_regexParser->reset($this->_patternIndex, $update);
@@ -429,6 +434,7 @@ require_once 'PHP/LexerGenerator/Exception.php';
             $this->error($e->getMessage());
             throw new PHP_LexerGenerator_Exception('Invalid pattern "' . $pattern . '"');
         }
+
         return $this->_regexParser->result;
     }
 }
@@ -440,25 +446,40 @@ lexfile ::= declare rules(B). {
     private $_yy_state = 1;
     private $_yy_stack = array();
 
-    function yylex()
+    public function yylex()
     {
         return $this->{\'yylex\' . $this->_yy_state}();
     }
 
-    function yypushstate($state)
+    public function yypushstate($state)
     {
+        if ($this->yyTraceFILE) {
+             fprintf($this->yyTraceFILE, "%sState push %s\n", $this->yyTracePrompt, isset($this->state_name[$this->_yy_state]) ? $this->state_name[$this->_yy_state] : $this->_yy_state);
+        }
         array_push($this->_yy_stack, $this->_yy_state);
         $this->_yy_state = $state;
+        if ($this->yyTraceFILE) {
+             fprintf($this->yyTraceFILE, "%snew State %s\n", $this->yyTracePrompt, isset($this->state_name[$this->_yy_state]) ? $this->state_name[$this->_yy_state] : $this->_yy_state);
+        }
     }
 
-    function yypopstate()
+    public function yypopstate()
     {
-        $this->_yy_state = array_pop($this->_yy_stack);
+       if ($this->yyTraceFILE) {
+             fprintf($this->yyTraceFILE, "%sState pop %s\n", $this->yyTracePrompt,  isset($this->state_name[$this->_yy_state]) ? $this->state_name[$this->_yy_state] : $this->_yy_state);
+        }
+       $this->_yy_state = array_pop($this->_yy_stack);
+        if ($this->yyTraceFILE) {
+             fprintf($this->yyTraceFILE, "%snew State %s\n", $this->yyTracePrompt, isset($this->state_name[$this->_yy_state]) ? $this->state_name[$this->_yy_state] : $this->_yy_state);
+        }
     }
 
-    function yybegin($state)
+    public function yybegin($state)
     {
-        $this->_yy_state = $state;
+       $this->_yy_state = $state;
+        if ($this->yyTraceFILE) {
+             fprintf($this->yyTraceFILE, "%sState set %s\n", $this->yyTracePrompt, isset($this->state_name[$this->_yy_state]) ? $this->state_name[$this->_yy_state] : $this->_yy_state);
+        }
     }
 
 ');
@@ -471,28 +492,43 @@ lexfile ::= declare rules(B). {
 }
 lexfile ::= declare(D) PHPCODE(B) rules(C). {
     fwrite($this->out, '
-    private $_yy_state = 1;
+
     private $_yy_stack = array();
 
-    function yylex()
+    public function yylex()
     {
         return $this->{\'yylex\' . $this->_yy_state}();
     }
 
-    function yypushstate($state)
+    public function yypushstate($state)
     {
+        if ($this->yyTraceFILE) {
+             fprintf($this->yyTraceFILE, "%sState push %s\n", $this->yyTracePrompt, isset($this->state_name[$this->_yy_state]) ? $this->state_name[$this->_yy_state] : $this->_yy_state);
+        }
         array_push($this->_yy_stack, $this->_yy_state);
         $this->_yy_state = $state;
+        if ($this->yyTraceFILE) {
+             fprintf($this->yyTraceFILE, "%snew State %s\n", $this->yyTracePrompt, isset($this->state_name[$this->_yy_state]) ? $this->state_name[$this->_yy_state] : $this->_yy_state);
+        }
     }
 
-    function yypopstate()
+    public function yypopstate()
     {
-        $this->_yy_state = array_pop($this->_yy_stack);
+       if ($this->yyTraceFILE) {
+             fprintf($this->yyTraceFILE, "%sState pop %s\n", $this->yyTracePrompt,  isset($this->state_name[$this->_yy_state]) ? $this->state_name[$this->_yy_state] : $this->_yy_state);
+        }
+       $this->_yy_state = array_pop($this->_yy_stack);
+        if ($this->yyTraceFILE) {
+             fprintf($this->yyTraceFILE, "%snew State %s\n", $this->yyTracePrompt, isset($this->state_name[$this->_yy_state]) ? $this->state_name[$this->_yy_state] : $this->_yy_state);
+        }
     }
 
-    function yybegin($state)
+    public function yybegin($state)
     {
-        $this->_yy_state = $state;
+       $this->_yy_state = $state;
+        if ($this->yyTraceFILE) {
+             fprintf($this->yyTraceFILE, "%sState set %s\n", $this->yyTracePrompt, isset($this->state_name[$this->_yy_state]) ? $this->state_name[$this->_yy_state] : $this->_yy_state);
+        }
     }
 
 ');
@@ -514,25 +550,40 @@ lexfile ::= PHPCODE(B) declare(D) rules(C). {
     private $_yy_state = 1;
     private $_yy_stack = array();
 
-    function yylex()
+    public function yylex()
     {
         return $this->{\'yylex\' . $this->_yy_state}();
     }
 
-    function yypushstate($state)
+    public function yypushstate($state)
     {
+        if ($this->yyTraceFILE) {
+             fprintf($this->yyTraceFILE, "%sState push %s\n", $this->yyTracePrompt, isset($this->state_name[$this->_yy_state]) ? $this->state_name[$this->_yy_state] : $this->_yy_state);
+        }
         array_push($this->_yy_stack, $this->_yy_state);
         $this->_yy_state = $state;
+        if ($this->yyTraceFILE) {
+             fprintf($this->yyTraceFILE, "%snew State %s\n", $this->yyTracePrompt, isset($this->state_name[$this->_yy_state]) ? $this->state_name[$this->_yy_state] : $this->_yy_state);
+        }
     }
 
-    function yypopstate()
+    public function yypopstate()
     {
-        $this->_yy_state = array_pop($this->_yy_stack);
+       if ($this->yyTraceFILE) {
+             fprintf($this->yyTraceFILE, "%sState pop %s\n", $this->yyTracePrompt,  isset($this->state_name[$this->_yy_state]) ? $this->state_name[$this->_yy_state] : $this->_yy_state);
+        }
+       $this->_yy_state = array_pop($this->_yy_stack);
+        if ($this->yyTraceFILE) {
+             fprintf($this->yyTraceFILE, "%snew State %s\n", $this->yyTracePrompt, isset($this->state_name[$this->_yy_state]) ? $this->state_name[$this->_yy_state] : $this->_yy_state);
+        }
     }
 
-    function yybegin($state)
+    public function yybegin($state)
     {
-        $this->_yy_state = $state;
+       $this->_yy_state = $state;
+        if ($this->yyTraceFILE) {
+             fprintf($this->yyTraceFILE, "%sState set %s\n", $this->yyTracePrompt, isset($this->state_name[$this->_yy_state]) ? $this->state_name[$this->_yy_state] : $this->_yy_state);
+        }
     }
 
 ');
@@ -551,25 +602,40 @@ lexfile ::= PHPCODE(A) declare(D) PHPCODE(B) rules(C). {
     private $_yy_state = 1;
     private $_yy_stack = array();
 
-    function yylex()
+    public function yylex()
     {
         return $this->{\'yylex\' . $this->_yy_state}();
     }
 
-    function yypushstate($state)
+    public function yypushstate($state)
     {
+        if ($this->yyTraceFILE) {
+             fprintf($this->yyTraceFILE, "%sState push %s\n", $this->yyTracePrompt, isset($this->state_name[$this->_yy_state]) ? $this->state_name[$this->_yy_state] : $this->_yy_state);
+        }
         array_push($this->_yy_stack, $this->_yy_state);
         $this->_yy_state = $state;
+        if ($this->yyTraceFILE) {
+             fprintf($this->yyTraceFILE, "%snew State %s\n", $this->yyTracePrompt, isset($this->state_name[$this->_yy_state]) ? $this->state_name[$this->_yy_state] : $this->_yy_state);
+        }
     }
 
-    function yypopstate()
+    public function yypopstate()
     {
-        $this->_yy_state = array_pop($this->_yy_stack);
+       if ($this->yyTraceFILE) {
+             fprintf($this->yyTraceFILE, "%sState pop %s\n", $this->yyTracePrompt,  isset($this->state_name[$this->_yy_state]) ? $this->state_name[$this->_yy_state] : $this->_yy_state);
+        }
+       $this->_yy_state = array_pop($this->_yy_stack);
+        if ($this->yyTraceFILE) {
+             fprintf($this->yyTraceFILE, "%snew State %s\n", $this->yyTracePrompt, isset($this->state_name[$this->_yy_state]) ? $this->state_name[$this->_yy_state] : $this->_yy_state);
+        }
     }
 
-    function yybegin($state)
+    public function yybegin($state)
     {
-        $this->_yy_state = $state;
+       $this->_yy_state = $state;
+        if ($this->yyTraceFILE) {
+             fprintf($this->yyTraceFILE, "%sState set %s\n", $this->yyTracePrompt, isset($this->state_name[$this->_yy_state]) ? $this->state_name[$this->_yy_state] : $this->_yy_state);
+        }
     }
 
 ');
