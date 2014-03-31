@@ -104,8 +104,39 @@ function Smarty_Internal_Templatelexer(data, compiler) {
     this._init && this._init();
 }
 
+var TOKEN = {};
 
 (function(self, proto) {
+
+    self.setTokenMap = function(map){
+        TOKEN = map;
+    };
+
+    proto.isAutoLiteral = function() {
+        if(this.smarty.auto_literal){
+            var nextChar = this.value[this.ldel_length];
+            if(nextChar && /^[ \n\t\r]$/.test(nextChar)){
+                return true;
+            }
+        }
+        return false;
+    };
+
+    proto.testAutoLiteral = function(token) {
+        var auto = this.isAutoLiteral();
+        this.token = auto
+            ? TOKEN.TP_TEXT
+            : token;
+        return auto;
+    };
+
+    proto.tryEnterSmarty = function(token) {
+        if(!this.testAutoLiteral(token)){
+            this.yypushstate(self.SMARTY);
+            this.taglineno = this.line;
+        }
+    };
+
 
     proto._init = function()
     {
@@ -197,143 +228,96 @@ function Smarty_Internal_Templatelexer(data, compiler) {
             proto.yy_r1_1 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_TEXT;
+  this.token = TOKEN.TP_TEXT;
     };
     proto.yy_r1_2 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_COMMENT;
+  this.token = TOKEN.TP_COMMENT;
     };
     proto.yy_r1_4 = function($yy_subpatterns)
     {
 
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false)  {
-    this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-    this.token = Smarty_Internal_Templateparser.TP_STRIPON;
-  }
+    this.testAutoLiteral(TOKEN.TP_STRIPON);
     };
     proto.yy_r1_5 = function($yy_subpatterns)
     {
 
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-    this.token = Smarty_Internal_Templateparser.TP_STRIPOFF;
-  }
+    this.testAutoLiteral(TOKEN.TP_STRIPOFF);
     };
     proto.yy_r1_6 = function($yy_subpatterns)
     {
 
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-    this.token = Smarty_Internal_Templateparser.TP_LITERALSTART;
-    this.yypushstate(self.LITERAL);
-   }
+    if(!this.testAutoLiteral(TOKEN.TP_LITERALSTART)){
+        this.yypushstate(self.LITERAL);
+    }
     };
     proto.yy_r1_7 = function($yy_subpatterns)
     {
 
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-     this.token = Smarty_Internal_Templateparser.TP_LDELIF;
-     this.yypushstate(self.SMARTY);
-     this.taglineno = this.line;
-  }
+    this.tryEnterSmarty(TOKEN.TP_LDELIF);
     };
     proto.yy_r1_9 = function($yy_subpatterns)
     {
 
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-     this.token = Smarty_Internal_Templateparser.TP_LDELFOR;
-     this.yypushstate(self.SMARTY);
-     this.taglineno = this.line;
-  }
+    this.tryEnterSmarty(TOKEN.TP_LDELFOR);
     };
     proto.yy_r1_10 = function($yy_subpatterns)
     {
 
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-     this.token = Smarty_Internal_Templateparser.TP_LDELFOREACH;
-     this.yypushstate(self.SMARTY);
-     this.taglineno = this.line;
-  }
+    this.tryEnterSmarty(TOKEN.TP_LDELFOREACH);
     };
     proto.yy_r1_11 = function($yy_subpatterns)
     {
 
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-     this.token = Smarty_Internal_Templateparser.TP_LDELSETFILTER;
-     this.yypushstate(self.SMARTY);
-     this.taglineno = this.line;
-  }
+    this.tryEnterSmarty(TOKEN.TP_LDELSETFILTER);
     };
     proto.yy_r1_12 = function($yy_subpatterns)
     {
 
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-    this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-    this.token = Smarty_Internal_Templateparser.TP_LDELSLASH;
-    this.yypushstate(self.SMARTY);
-    this.taglineno = this.line;
-  }
+    this.tryEnterSmarty(TOKEN.TP_LDELSLASH);
     };
     proto.yy_r1_13 = function($yy_subpatterns)
     {
 
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-    this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-     this.token = Smarty_Internal_Templateparser.TP_LDEL;
-     this.yypushstate(self.SMARTY);
-     this.taglineno = this.line;
-  }
+    this.tryEnterSmarty(TOKEN.TP_LDEL);
     };
     proto.yy_r1_14 = function($yy_subpatterns)
     {
 
   if(this.value == '<?' || this.value == '<?=' || this.value == '<?php'){
-    this.token = Smarty_Internal_Templateparser.TP_PHPSTARTTAG;
+    this.token = TOKEN.TP_PHPSTARTTAG;
   } else if (this.value == '<?xml') {
-    this.token = Smarty_Internal_Templateparser.TP_XMLTAG;
+    this.token = TOKEN.TP_XMLTAG;
   } else {
-    this.token = Smarty_Internal_Templateparser.TP_FAKEPHPSTARTTAG;
+    this.token = TOKEN.TP_FAKEPHPSTARTTAG;
     this.value = this.value.substr(0, 2);
   }
      };
     proto.yy_r1_15 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_PHPENDTAG;
+  this.token = TOKEN.TP_PHPENDTAG;
     };
     proto.yy_r1_16 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_TEXT;
+  this.token = TOKEN.TP_TEXT;
     };
     proto.yy_r1_17 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_ASPSTARTTAG;
+  this.token = TOKEN.TP_ASPSTARTTAG;
     };
     proto.yy_r1_18 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_ASPENDTAG;
+  this.token = TOKEN.TP_ASPENDTAG;
     };
     proto.yy_r1_19 = function($yy_subpatterns)
     {
 
-  var nextReg = new RegExp(this.ldel + "|<\\?|\\?>|<%|%>", "g");
+  var nextReg = new RegExp(""+this.ldel+"|<\\?|\\?>|<%|%>", "g");
   nextReg.lastIndex = this.counter;
 
   var to = this.dataLength,
@@ -342,8 +326,9 @@ function Smarty_Internal_Templatelexer(data, compiler) {
     to = result.index;
   }
   this.value = this.data.substring(this.counter, to);
-  this.token = Smarty_Internal_Templateparser.TP_TEXT;
+  this.token = TOKEN.TP_TEXT;
     };
+
 
 
     proto.yylex2 = function()
@@ -408,235 +393,235 @@ function Smarty_Internal_Templatelexer(data, compiler) {
             proto.yy_r2_1 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_QUOTE;
+  this.token = TOKEN.TP_QUOTE;
   this.yypushstate(self.DOUBLEQUOTEDSTRING);
     };
     proto.yy_r2_2 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_SINGLEQUOTESTRING;
+  this.token = TOKEN.TP_SINGLEQUOTESTRING;
     };
     proto.yy_r2_3 = function($yy_subpatterns)
     {
 
-     this.token = Smarty_Internal_Templateparser.TP_SMARTYBLOCKCHILDPARENT;
+     this.token = TOKEN.TP_SMARTYBLOCKCHILDPARENT;
      this.taglineno = this.line;
     };
     proto.yy_r2_5 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_DOLLAR;
+  this.token = TOKEN.TP_DOLLAR;
     };
     proto.yy_r2_6 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_RDEL;
+  this.token = TOKEN.TP_RDEL;
   this.yypopstate();
     };
     proto.yy_r2_7 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_ISIN;
+  this.token = TOKEN.TP_ISIN;
     };
     proto.yy_r2_8 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_AS;
+  this.token = TOKEN.TP_AS;
     };
     proto.yy_r2_9 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_TO;
+  this.token = TOKEN.TP_TO;
     };
     proto.yy_r2_10 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_STEP;
+  this.token = TOKEN.TP_STEP;
     };
     proto.yy_r2_11 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_INSTANCEOF;
+  this.token = TOKEN.TP_INSTANCEOF;
     };
     proto.yy_r2_12 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_IDENTITY;
+  this.token = TOKEN.TP_IDENTITY;
     };
     proto.yy_r2_13 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_NONEIDENTITY;
+  this.token = TOKEN.TP_NONEIDENTITY;
     };
     proto.yy_r2_14 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_EQUALS;
+  this.token = TOKEN.TP_EQUALS;
     };
     proto.yy_r2_15 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_NOTEQUALS;
+  this.token = TOKEN.TP_NOTEQUALS;
     };
     proto.yy_r2_17 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_GREATEREQUAL;
+  this.token = TOKEN.TP_GREATEREQUAL;
     };
     proto.yy_r2_19 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_LESSEQUAL;
+  this.token = TOKEN.TP_LESSEQUAL;
     };
     proto.yy_r2_21 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_GREATERTHAN;
+  this.token = TOKEN.TP_GREATERTHAN;
     };
     proto.yy_r2_22 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_LESSTHAN;
+  this.token = TOKEN.TP_LESSTHAN;
     };
     proto.yy_r2_23 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_MOD;
+  this.token = TOKEN.TP_MOD;
     };
     proto.yy_r2_24 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_NOT;
+  this.token = TOKEN.TP_NOT;
     };
     proto.yy_r2_25 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_LAND;
+  this.token = TOKEN.TP_LAND;
     };
     proto.yy_r2_26 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_LOR;
+  this.token = TOKEN.TP_LOR;
     };
     proto.yy_r2_27 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_LXOR;
+  this.token = TOKEN.TP_LXOR;
     };
     proto.yy_r2_28 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_ISODDBY;
+  this.token = TOKEN.TP_ISODDBY;
     };
     proto.yy_r2_29 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_ISNOTODDBY;
+  this.token = TOKEN.TP_ISNOTODDBY;
     };
     proto.yy_r2_30 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_ISODD;
+  this.token = TOKEN.TP_ISODD;
     };
     proto.yy_r2_31 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_ISNOTODD;
+  this.token = TOKEN.TP_ISNOTODD;
     };
     proto.yy_r2_32 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_ISEVENBY;
+  this.token = TOKEN.TP_ISEVENBY;
     };
     proto.yy_r2_33 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_ISNOTEVENBY;
+  this.token = TOKEN.TP_ISNOTEVENBY;
     };
     proto.yy_r2_34 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_ISEVEN;
+  this.token = TOKEN.TP_ISEVEN;
     };
     proto.yy_r2_35 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_ISNOTEVEN;
+  this.token = TOKEN.TP_ISNOTEVEN;
     };
     proto.yy_r2_36 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_ISDIVBY;
+  this.token = TOKEN.TP_ISDIVBY;
     };
     proto.yy_r2_37 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_ISNOTDIVBY;
+  this.token = TOKEN.TP_ISNOTDIVBY;
     };
     proto.yy_r2_38 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_TYPECAST;
+  this.token = TOKEN.TP_TYPECAST;
     };
     proto.yy_r2_42 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_OPENP;
+  this.token = TOKEN.TP_OPENP;
     };
     proto.yy_r2_43 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_CLOSEP;
+  this.token = TOKEN.TP_CLOSEP;
     };
     proto.yy_r2_44 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_OPENB;
+  this.token = TOKEN.TP_OPENB;
     };
     proto.yy_r2_45 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_CLOSEB;
+  this.token = TOKEN.TP_CLOSEB;
     };
     proto.yy_r2_46 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_PTR;
+  this.token = TOKEN.TP_PTR;
     };
     proto.yy_r2_47 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_APTR;
+  this.token = TOKEN.TP_APTR;
     };
     proto.yy_r2_48 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_EQUAL;
+  this.token = TOKEN.TP_EQUAL;
     };
     proto.yy_r2_49 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_INCDEC;
+  this.token = TOKEN.TP_INCDEC;
     };
     proto.yy_r2_50 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_UNIMATH;
+  this.token = TOKEN.TP_UNIMATH;
     };
     proto.yy_r2_52 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_MATH;
+  this.token = TOKEN.TP_MATH;
     };
     proto.yy_r2_54 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_AT;
+  this.token = TOKEN.TP_AT;
     };
     proto.yy_r2_55 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_HATCH;
+  this.token = TOKEN.TP_HATCH;
     };
     proto.yy_r2_56 = function($yy_subpatterns)
     {
@@ -644,140 +629,110 @@ function Smarty_Internal_Templatelexer(data, compiler) {
   // resolve conflicts with shorttag and right_delimiter starting with '='
   var start = this.counter + this.value.length - 1;
   //if (substr(this.data, this.counter + strlen(this.value) - 1, this.rdel_length) == this.smarty.right_delimiter) {
-  if (this.data.indexOf(this.smarty.right_delimiter, start) == start) {
+  if (this.data.indexOf(this.smarty.right_delimiter, start) === start) {
     // TODO
      preg_match("/\s+/",this.value,$match);
      this.value = $match[0];
-     this.token = Smarty_Internal_Templateparser.TP_SPACE;
+     this.token = TOKEN.TP_SPACE;
   } else {
-     this.token = Smarty_Internal_Templateparser.TP_ATTR;
+     this.token = TOKEN.TP_ATTR;
   }
     };
     proto.yy_r2_57 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_ID;
+  this.token = TOKEN.TP_ID;
     };
     proto.yy_r2_58 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_INTEGER;
+  this.token = TOKEN.TP_INTEGER;
     };
     proto.yy_r2_59 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_BACKTICK;
+  this.token = TOKEN.TP_BACKTICK;
   this.yypopstate();
     };
     proto.yy_r2_60 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_VERT;
+  this.token = TOKEN.TP_VERT;
     };
     proto.yy_r2_61 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_DOT;
+  this.token = TOKEN.TP_DOT;
     };
     proto.yy_r2_62 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_COMMA;
+  this.token = TOKEN.TP_COMMA;
     };
     proto.yy_r2_63 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_SEMICOLON;
+  this.token = TOKEN.TP_SEMICOLON;
     };
     proto.yy_r2_64 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_DOUBLECOLON;
+  this.token = TOKEN.TP_DOUBLECOLON;
     };
     proto.yy_r2_65 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_COLON;
+  this.token = TOKEN.TP_COLON;
     };
     proto.yy_r2_66 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_ANDSYM;
+  this.token = TOKEN.TP_ANDSYM;
     };
     proto.yy_r2_67 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_QMARK;
+  this.token = TOKEN.TP_QMARK;
     };
     proto.yy_r2_68 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_HEX;
+  this.token = TOKEN.TP_HEX;
     };
     proto.yy_r2_69 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_SPACE;
+  this.token = TOKEN.TP_SPACE;
     };
     proto.yy_r2_70 = function($yy_subpatterns)
     {
 
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-     this.token = Smarty_Internal_Templateparser.TP_LDELIF;
-     this.yypushstate(self.SMARTY);
-     this.taglineno = this.line;
-  }
+  this.tryEnterSmarty(TOKEN.TP_LDELIF);
     };
     proto.yy_r2_72 = function($yy_subpatterns)
     {
 
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-     this.token = Smarty_Internal_Templateparser.TP_LDELFOR;
-     this.yypushstate(self.SMARTY);
-     this.taglineno = this.line;
-  }
+  this.tryEnterSmarty(TOKEN.TP_LDELFOR);
     };
     proto.yy_r2_73 = function($yy_subpatterns)
     {
 
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-     this.token = Smarty_Internal_Templateparser.TP_LDELFOREACH;
-     this.yypushstate(self.SMARTY);
-     this.taglineno = this.line;
-  }
+  this.tryEnterSmarty(TOKEN.TP_LDELFOREACH);
     };
     proto.yy_r2_74 = function($yy_subpatterns)
     {
 
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-    this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-    this.token = Smarty_Internal_Templateparser.TP_LDELSLASH;
-    this.yypushstate(self.SMARTY);
-    this.taglineno = this.line;
-  }
+  this.tryEnterSmarty(TOKEN.TP_LDELSLASH);
     };
     proto.yy_r2_75 = function($yy_subpatterns)
     {
 
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-    this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-     this.token = Smarty_Internal_Templateparser.TP_LDEL;
-     this.yypushstate(self.SMARTY);
-     this.taglineno = this.line;
-  }
+  this.tryEnterSmarty(TOKEN.TP_LDEL);
     };
     proto.yy_r2_76 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_TEXT;
+  this.token = TOKEN.TP_TEXT;
     };
 
 
@@ -844,52 +799,46 @@ function Smarty_Internal_Templatelexer(data, compiler) {
             proto.yy_r3_1 = function($yy_subpatterns)
     {
 
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-    this.token = Smarty_Internal_Templateparser.TP_LITERALSTART;
-    this.yypushstate(self.LITERAL);
-  }
+    if(!this.testAutoLiteral(TOKEN.TP_LITERALSTART)){
+        this.yypushstate(self.LITERAL);
+    }
     };
     proto.yy_r3_2 = function($yy_subpatterns)
     {
 
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-    this.token = Smarty_Internal_Templateparser.TP_LITERALEND;
-    this.yypopstate();
-  }
+    if(!this.testAutoLiteral(TOKEN.TP_LITERALEND)){
+        this.yypopstate();
+    }
     };
     proto.yy_r3_3 = function($yy_subpatterns)
     {
 
    if(this.value == '<?' || this.value == '<?=' || this.value == '<?php'){
-    this.token = Smarty_Internal_Templateparser.TP_PHPSTARTTAG;
+    this.token = TOKEN.TP_PHPSTARTTAG;
    } else {
-    this.token = Smarty_Internal_Templateparser.TP_FAKEPHPSTARTTAG;
+    this.token = TOKEN.TP_FAKEPHPSTARTTAG;
     this.value = this.value.substr(0, 2);
    }
     };
     proto.yy_r3_4 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_PHPENDTAG;
+  this.token = TOKEN.TP_PHPENDTAG;
     };
     proto.yy_r3_5 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_ASPSTARTTAG;
+  this.token = TOKEN.TP_ASPSTARTTAG;
     };
     proto.yy_r3_6 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_ASPENDTAG;
+  this.token = TOKEN.TP_ASPENDTAG;
     };
     proto.yy_r3_7 = function($yy_subpatterns)
     {
 
-  var nextReg = new RegExp(this.ldel + "/?literal" + this.rdel + "|<\\?|\\?>|<%|%>", "g");
+  var nextReg = new RegExp(""+this.ldel+"/?literal"+this.rdel+"|<\\?|\\?>|<%|%>", "g");
   nextReg.lastIndex = this.counter;
 
   var to = this.dataLength,
@@ -900,8 +849,9 @@ function Smarty_Internal_Templatelexer(data, compiler) {
     this.compiler.trigger_template_error("missing or misspelled literal closing tag");
   }
   this.value = this.data.substring(this.counter, to);
-  this.token = Smarty_Internal_Templateparser.TP_LITERAL;
+  this.token = TOKEN.TP_LITERAL;
     };
+
 
 
     proto.yylex4 = function()
@@ -966,68 +916,38 @@ function Smarty_Internal_Templatelexer(data, compiler) {
             proto.yy_r4_1 = function($yy_subpatterns)
     {
 
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-     this.token = Smarty_Internal_Templateparser.TP_LDELIF;
-     this.yypushstate(self.SMARTY);
-     this.taglineno = this.line;
-  }
+    this.tryEnterSmarty(TOKEN.TP_LDELIF);
     };
     proto.yy_r4_3 = function($yy_subpatterns)
     {
 
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-     this.token = Smarty_Internal_Templateparser.TP_LDELFOR;
-     this.yypushstate(self.SMARTY);
-     this.taglineno = this.line;
-  }
+    this.tryEnterSmarty(TOKEN.TP_LDELFOR);
     };
     proto.yy_r4_4 = function($yy_subpatterns)
     {
 
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-     this.token = Smarty_Internal_Templateparser.TP_LDELFOREACH;
-     this.yypushstate(self.SMARTY);
-     this.taglineno = this.line;
-  }
+    this.tryEnterSmarty(TOKEN.TP_LDELFOREACH);
     };
     proto.yy_r4_5 = function($yy_subpatterns)
     {
 
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-    this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-    this.token = Smarty_Internal_Templateparser.TP_LDELSLASH;
-    this.yypushstate(self.SMARTY);
-    this.taglineno = this.line;
-  }
+    this.tryEnterSmarty(TOKEN.TP_LDELSLASH);
     };
     proto.yy_r4_6 = function($yy_subpatterns)
     {
 
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-    this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-     this.token = Smarty_Internal_Templateparser.TP_LDEL;
-     this.yypushstate(self.SMARTY);
-     this.taglineno = this.line;
-  }
+    this.tryEnterSmarty(TOKEN.TP_LDEL);
     };
     proto.yy_r4_7 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_QUOTE;
+  this.token = TOKEN.TP_QUOTE;
   this.yypopstate();
     };
     proto.yy_r4_8 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_BACKTICK;
+  this.token = TOKEN.TP_BACKTICK;
   this.value = substr(this.value,0,-1);
   this.yypushstate(self.SMARTY);
   this.taglineno = this.line;
@@ -1035,33 +955,26 @@ function Smarty_Internal_Templatelexer(data, compiler) {
     proto.yy_r4_9 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_DOLLARID;
+  this.token = TOKEN.TP_DOLLARID;
     };
     proto.yy_r4_10 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_TEXT;
+  this.token = TOKEN.TP_TEXT;
     };
     proto.yy_r4_11 = function($yy_subpatterns)
     {
 
-  this.token = Smarty_Internal_Templateparser.TP_TEXT;
+  this.token = TOKEN.TP_TEXT;
     };
     proto.yy_r4_15 = function($yy_subpatterns)
     {
 
-  if (this.mbstring_overload) {
-    $to = mb_strlen(this.data,'latin1');
-  } else {
-    $to = strlen(this.data);
-  }
-  if (this.mbstring_overload) {
-    this.value = mb_substr(this.data,this.counter,$to-this.counter,'latin1');
-  } else {
-    this.value = substr(this.data,this.counter,$to-this.counter);
-  }
-  this.token = Smarty_Internal_Templateparser.TP_TEXT;
+  //奇怪的逻辑
+  this.value = this.data.substr(this.counter);
+  this.token = TOKEN.TP_TEXT;
     };
+
 
 
     proto.yylex5 = function()
@@ -1126,50 +1039,47 @@ function Smarty_Internal_Templatelexer(data, compiler) {
             proto.yy_r5_1 = function($yy_subpatterns)
     {
 
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     return false;
-  } else {
-    this.token = Smarty_Internal_Templateparser.TP_STRIPON;
-  }
+    if(this.isAutoLiteral()){
+        return false;
+    }else{
+        this.token = TOKEN.TP_STRIPON;
+    }
     };
     proto.yy_r5_2 = function($yy_subpatterns)
     {
 
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     return false;
-  } else {
-    this.token = Smarty_Internal_Templateparser.TP_STRIPOFF;
-  }
+    if(this.isAutoLiteral()){
+        return false;
+    }else{
+        this.token = TOKEN.TP_STRIPOFF;
+    }
     };
     proto.yy_r5_3 = function($yy_subpatterns)
     {
 
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     return false;
-  } else {
-    this.yypopstate();
-    return true;
-  }
+    if(this.isAutoLiteral()){
+        return false;
+    }else{
+        this.yypopstate();
+        return true;
+    }
     };
     proto.yy_r5_4 = function($yy_subpatterns)
     {
 
-  if (this.mbstring_overload) {
-    $to = mb_strlen(this.data,'latin1');
-  } else {
-    $to = strlen(this.data);
+  var nextReg = new RegExp(""+this.ldel+"\s*((/)?strip\\s*"+this.rdel+"|block\\s+)", "g");
+  nextReg.lastIndex = this.counter;
+
+  var to = this.dataLength,
+      result;
+  if((result = nextReg.exec(this.data)) !== null){
+    to = result.index;
   }
-  preg_match("/"+this.ldel+"\s*((\/)?strip\s*"+this.rdel+"|block\s+)/",this.data,$match,PREG_OFFSET_CAPTURE,this.counter);
-  if (isset($match[0][1])) {
-    $to = $match[0][1];
-  }
-  if (this.mbstring_overload) {
-    this.value = mb_substr(this.data,this.counter,$to-this.counter,'latin1');
-  } else {
-    this.value = substr(this.data,this.counter,$to-this.counter);
-  }
+
+  this.value = this.data.substring(this.counter, to);
   return false;
     };
+
 
 
     proto.yylex6 = function()
@@ -1234,51 +1144,48 @@ function Smarty_Internal_Templatelexer(data, compiler) {
             proto.yy_r6_1 = function($yy_subpatterns)
     {
 
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     this.token = Smarty_Internal_Templateparser.TP_BLOCKSOURCE;
-  } else {
-    this.yypopstate();
-    return true;
-  }
+    if(this.isAutoLiteral()){
+        this.token = TOKEN.TP_BLOCKSOURCE;
+    }else{
+        this.yypopstate();
+        return true;
+    }
     };
     proto.yy_r6_2 = function($yy_subpatterns)
     {
 
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     this.token = Smarty_Internal_Templateparser.TP_BLOCKSOURCE;
-  } else {
-    this.yypopstate();
-    return true;
-  }
+    if(this.isAutoLiteral()){
+        this.token = TOKEN.TP_BLOCKSOURCE;
+    }else{
+        this.yypopstate();
+        return true;
+    }
     };
     proto.yy_r6_3 = function($yy_subpatterns)
     {
 
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     this.token = Smarty_Internal_Templateparser.TP_BLOCKSOURCE;
-  } else {
-    this.yypopstate();
-    return true;
-  }
+    if(this.isAutoLiteral()){
+        this.token = TOKEN.TP_BLOCKSOURCE;
+    }else{
+        this.yypopstate();
+        return true;
+    }
     };
     proto.yy_r6_5 = function($yy_subpatterns)
     {
 
-  if (this.mbstring_overload) {
-    $to = mb_strlen(this.data,'latin1');
+  var nextReg = new RegExp(""+this.ldel+"\\s*((/)?block(\\s|"+this.rdel+")|[\\$]smarty\\.block\\.(child|parent)\\s*"+this.rdel+")", "g");
+  nextReg.lastIndex = this.counter;
+
+  var to = this.dataLength,
+      result;
+  if((result = nextReg.exec(this.data)) !== null){
+    to = result.index;
   } else {
-    $to = strlen(this.data);
+    this.compiler.trigger_template_error("missing or misspelled literal closing tag");
   }
-  preg_match("/"+this.ldel+"\s*((\/)?block(\s|"+this.rdel+")|[\$]smarty\.block\.(child|parent)\s*"+this.rdel+")/",this.data,$match,PREG_OFFSET_CAPTURE,this.counter);
-  if (isset($match[0][1])) {
-    $to = $match[0][1];
-  }
-  if (this.mbstring_overload) {
-    this.value = mb_substr(this.data,this.counter,$to-this.counter,'latin1');
-  } else {
-    this.value = substr(this.data,this.counter,$to-this.counter);
-  }
-  this.token = Smarty_Internal_Templateparser.TP_BLOCKSOURCE;
+  this.value = this.data.substring(this.counter, to);
+  this.token = TOKEN.TP_BLOCKSOURCE;
     };
 
     

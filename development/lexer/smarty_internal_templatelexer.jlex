@@ -104,8 +104,39 @@ function Smarty_Internal_Templatelexer(data, compiler) {
     this._init && this._init();
 }
 
+var TOKEN = {};
 
 (function(self, proto) {
+
+    self.setTokenMap = function(map){
+        TOKEN = map;
+    };
+
+    proto.isAutoLiteral = function() {
+        if(this.smarty.auto_literal){
+            var nextChar = this.value[this.ldel_length];
+            if(nextChar && /^[ \n\t\r]$/.test(nextChar)){
+                return true;
+            }
+        }
+        return false;
+    };
+
+    proto.testAutoLiteral = function(token) {
+        var auto = this.isAutoLiteral();
+        this.token = auto
+            ? TOKEN.TP_TEXT
+            : token;
+        return auto;
+    };
+
+    proto.tryEnterSmarty = function(token) {
+        if(!this.testAutoLiteral(token)){
+            this.yypushstate(self.SMARTY);
+            this.taglineno = this.line;
+        }
+    };
+
 /*!lex2php
 %input this.data
 %counter this.counter
@@ -200,111 +231,64 @@ single_quote = /'/
 /*!lex2php
 %statename TEXT
 emptyjava {
-  this.token = Smarty_Internal_Templateparser.TP_TEXT;
+  this.token = TOKEN.TP_TEXT;
 }
 comment {
-  this.token = Smarty_Internal_Templateparser.TP_COMMENT;
+  this.token = TOKEN.TP_COMMENT;
 }
 ldel strip rdel {
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false)  {
-    this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-    this.token = Smarty_Internal_Templateparser.TP_STRIPON;
-  }
+    this.testAutoLiteral(TOKEN.TP_STRIPON);
 }
 ldel slash strip rdel {
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-    this.token = Smarty_Internal_Templateparser.TP_STRIPOFF;
-  }
+    this.testAutoLiteral(TOKEN.TP_STRIPOFF);
 }
 ldel literal rdel {
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-    this.token = Smarty_Internal_Templateparser.TP_LITERALSTART;
-    this.yypushstate(self.LITERAL);
-   }
+    if(!this.testAutoLiteral(TOKEN.TP_LITERALSTART)){
+        this.yypushstate(self.LITERAL);
+    }
 }
 ldel if {
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-     this.token = Smarty_Internal_Templateparser.TP_LDELIF;
-     this.yypushstate(self.SMARTY);
-     this.taglineno = this.line;
-  }
+    this.tryEnterSmarty(TOKEN.TP_LDELIF);
 }
 ldel for {
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-     this.token = Smarty_Internal_Templateparser.TP_LDELFOR;
-     this.yypushstate(self.SMARTY);
-     this.taglineno = this.line;
-  }
+    this.tryEnterSmarty(TOKEN.TP_LDELFOR);
 }
 ldel foreach {
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-     this.token = Smarty_Internal_Templateparser.TP_LDELFOREACH;
-     this.yypushstate(self.SMARTY);
-     this.taglineno = this.line;
-  }
+    this.tryEnterSmarty(TOKEN.TP_LDELFOREACH);
 }
 ldel setfilter {
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-     this.token = Smarty_Internal_Templateparser.TP_LDELSETFILTER;
-     this.yypushstate(self.SMARTY);
-     this.taglineno = this.line;
-  }
+    this.tryEnterSmarty(TOKEN.TP_LDELSETFILTER);
 }
 ldel slash {
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-    this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-    this.token = Smarty_Internal_Templateparser.TP_LDELSLASH;
-    this.yypushstate(self.SMARTY);
-    this.taglineno = this.line;
-  }
+    this.tryEnterSmarty(TOKEN.TP_LDELSLASH);
 }
 ldel {
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-    this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-     this.token = Smarty_Internal_Templateparser.TP_LDEL;
-     this.yypushstate(self.SMARTY);
-     this.taglineno = this.line;
-  }
+    this.tryEnterSmarty(TOKEN.TP_LDEL);
 }
 phpstarttag {
   if(this.value == '<?' || this.value == '<?=' || this.value == '<?php'){
-    this.token = Smarty_Internal_Templateparser.TP_PHPSTARTTAG;
+    this.token = TOKEN.TP_PHPSTARTTAG;
   } else if (this.value == '<?xml') {
-    this.token = Smarty_Internal_Templateparser.TP_XMLTAG;
+    this.token = TOKEN.TP_XMLTAG;
   } else {
-    this.token = Smarty_Internal_Templateparser.TP_FAKEPHPSTARTTAG;
+    this.token = TOKEN.TP_FAKEPHPSTARTTAG;
     this.value = this.value.substr(0, 2);
   }
  }
 phpendtag {
-  this.token = Smarty_Internal_Templateparser.TP_PHPENDTAG;
+  this.token = TOKEN.TP_PHPENDTAG;
 }
 rdel {
-  this.token = Smarty_Internal_Templateparser.TP_TEXT;
+  this.token = TOKEN.TP_TEXT;
 }
 aspstarttag {
-  this.token = Smarty_Internal_Templateparser.TP_ASPSTARTTAG;
+  this.token = TOKEN.TP_ASPSTARTTAG;
 }
 aspendtag {
-  this.token = Smarty_Internal_Templateparser.TP_ASPENDTAG;
+  this.token = TOKEN.TP_ASPENDTAG;
 }
 text {
-  var nextReg = new RegExp(this.ldel + "|<\\?|\\?>|<%|%>", "g");
+  var nextReg = new RegExp("SMARTYldel|<\\?|\\?>|<%|%>", "g");
   nextReg.lastIndex = this.counter;
 
   var to = this.dataLength,
@@ -313,296 +297,257 @@ text {
     to = result.index;
   }
   this.value = this.data.substring(this.counter, to);
-  this.token = Smarty_Internal_Templateparser.TP_TEXT;
+  this.token = TOKEN.TP_TEXT;
 }
-
-
 */
+
 /*!lex2php
 %statename SMARTY
 double_quote {
-  this.token = Smarty_Internal_Templateparser.TP_QUOTE;
+  this.token = TOKEN.TP_QUOTE;
   this.yypushstate(self.DOUBLEQUOTEDSTRING);
 }
 singlequotestring {
-  this.token = Smarty_Internal_Templateparser.TP_SINGLEQUOTESTRING;
+  this.token = TOKEN.TP_SINGLEQUOTESTRING;
 }
 smartyblockchildparent {
-     this.token = Smarty_Internal_Templateparser.TP_SMARTYBLOCKCHILDPARENT;
+     this.token = TOKEN.TP_SMARTYBLOCKCHILDPARENT;
      this.taglineno = this.line;
 }
 dollar {
-  this.token = Smarty_Internal_Templateparser.TP_DOLLAR;
+  this.token = TOKEN.TP_DOLLAR;
 }
 rdel {
-  this.token = Smarty_Internal_Templateparser.TP_RDEL;
+  this.token = TOKEN.TP_RDEL;
   this.yypopstate();
 }
 isin {
-  this.token = Smarty_Internal_Templateparser.TP_ISIN;
+  this.token = TOKEN.TP_ISIN;
 }
 as {
-  this.token = Smarty_Internal_Templateparser.TP_AS;
+  this.token = TOKEN.TP_AS;
 }
 to {
-  this.token = Smarty_Internal_Templateparser.TP_TO;
+  this.token = TOKEN.TP_TO;
 }
 step {
-  this.token = Smarty_Internal_Templateparser.TP_STEP;
+  this.token = TOKEN.TP_STEP;
 }
 instanceof {
-  this.token = Smarty_Internal_Templateparser.TP_INSTANCEOF;
+  this.token = TOKEN.TP_INSTANCEOF;
 }
 identity{
-  this.token = Smarty_Internal_Templateparser.TP_IDENTITY;
+  this.token = TOKEN.TP_IDENTITY;
 }
 noneidentity{
-  this.token = Smarty_Internal_Templateparser.TP_NONEIDENTITY;
+  this.token = TOKEN.TP_NONEIDENTITY;
 }
 equals{
-  this.token = Smarty_Internal_Templateparser.TP_EQUALS;
+  this.token = TOKEN.TP_EQUALS;
 }
 notequals{
-  this.token = Smarty_Internal_Templateparser.TP_NOTEQUALS;
+  this.token = TOKEN.TP_NOTEQUALS;
 }
 greaterequal{
-  this.token = Smarty_Internal_Templateparser.TP_GREATEREQUAL;
+  this.token = TOKEN.TP_GREATEREQUAL;
 }
 lessequal{
-  this.token = Smarty_Internal_Templateparser.TP_LESSEQUAL;
+  this.token = TOKEN.TP_LESSEQUAL;
 }
 greaterthan{
-  this.token = Smarty_Internal_Templateparser.TP_GREATERTHAN;
+  this.token = TOKEN.TP_GREATERTHAN;
 }
 lessthan{
-  this.token = Smarty_Internal_Templateparser.TP_LESSTHAN;
+  this.token = TOKEN.TP_LESSTHAN;
 }
 mod{
-  this.token = Smarty_Internal_Templateparser.TP_MOD;
+  this.token = TOKEN.TP_MOD;
 }
 not{
-  this.token = Smarty_Internal_Templateparser.TP_NOT;
+  this.token = TOKEN.TP_NOT;
 }
 land {
-  this.token = Smarty_Internal_Templateparser.TP_LAND;
+  this.token = TOKEN.TP_LAND;
 }
 lor {
-  this.token = Smarty_Internal_Templateparser.TP_LOR;
+  this.token = TOKEN.TP_LOR;
 }
 lxor {
-  this.token = Smarty_Internal_Templateparser.TP_LXOR;
+  this.token = TOKEN.TP_LXOR;
 }
 isoddby {
-  this.token = Smarty_Internal_Templateparser.TP_ISODDBY;
+  this.token = TOKEN.TP_ISODDBY;
 }
 isnotoddby {
-  this.token = Smarty_Internal_Templateparser.TP_ISNOTODDBY;
+  this.token = TOKEN.TP_ISNOTODDBY;
 }
-
 isodd  {
-  this.token = Smarty_Internal_Templateparser.TP_ISODD;
+  this.token = TOKEN.TP_ISODD;
 }
 isnotodd {
-  this.token = Smarty_Internal_Templateparser.TP_ISNOTODD;
+  this.token = TOKEN.TP_ISNOTODD;
 }
 isevenby {
-  this.token = Smarty_Internal_Templateparser.TP_ISEVENBY;
+  this.token = TOKEN.TP_ISEVENBY;
 }
 isnotevenby {
-  this.token = Smarty_Internal_Templateparser.TP_ISNOTEVENBY;
+  this.token = TOKEN.TP_ISNOTEVENBY;
 }
 iseven{
-  this.token = Smarty_Internal_Templateparser.TP_ISEVEN;
+  this.token = TOKEN.TP_ISEVEN;
 }
 isnoteven {
-  this.token = Smarty_Internal_Templateparser.TP_ISNOTEVEN;
+  this.token = TOKEN.TP_ISNOTEVEN;
 }
 isdivby {
-  this.token = Smarty_Internal_Templateparser.TP_ISDIVBY;
+  this.token = TOKEN.TP_ISDIVBY;
 }
 isnotdivby {
-  this.token = Smarty_Internal_Templateparser.TP_ISNOTDIVBY;
+  this.token = TOKEN.TP_ISNOTDIVBY;
 }
 typecast {
-  this.token = Smarty_Internal_Templateparser.TP_TYPECAST;
+  this.token = TOKEN.TP_TYPECAST;
 }
 openP {
-  this.token = Smarty_Internal_Templateparser.TP_OPENP;
+  this.token = TOKEN.TP_OPENP;
 }
 closeP {
-  this.token = Smarty_Internal_Templateparser.TP_CLOSEP;
+  this.token = TOKEN.TP_CLOSEP;
 }
 openB {
-  this.token = Smarty_Internal_Templateparser.TP_OPENB;
+  this.token = TOKEN.TP_OPENB;
 }
-
 closeB {
-  this.token = Smarty_Internal_Templateparser.TP_CLOSEB;
+  this.token = TOKEN.TP_CLOSEB;
 }
 ptr {
-  this.token = Smarty_Internal_Templateparser.TP_PTR;
+  this.token = TOKEN.TP_PTR;
 }
 aptr {
-  this.token = Smarty_Internal_Templateparser.TP_APTR;
+  this.token = TOKEN.TP_APTR;
 }
 equal {
-  this.token = Smarty_Internal_Templateparser.TP_EQUAL;
+  this.token = TOKEN.TP_EQUAL;
 }
 incdec {
-  this.token = Smarty_Internal_Templateparser.TP_INCDEC;
+  this.token = TOKEN.TP_INCDEC;
 }
 unimath {
-  this.token = Smarty_Internal_Templateparser.TP_UNIMATH;
+  this.token = TOKEN.TP_UNIMATH;
 }
 math {
-  this.token = Smarty_Internal_Templateparser.TP_MATH;
+  this.token = TOKEN.TP_MATH;
 }
 at {
-  this.token = Smarty_Internal_Templateparser.TP_AT;
+  this.token = TOKEN.TP_AT;
 }
 hatch {
-  this.token = Smarty_Internal_Templateparser.TP_HATCH;
+  this.token = TOKEN.TP_HATCH;
 }
 attr {
   // resolve conflicts with shorttag and right_delimiter starting with '='
   var start = this.counter + this.value.length - 1;
   //if (substr(this.data, this.counter + strlen(this.value) - 1, this.rdel_length) == this.smarty.right_delimiter) {
-  if (this.data.indexOf(this.smarty.right_delimiter, start) == start) {
+  if (this.data.indexOf(this.smarty.right_delimiter, start) === start) {
     // TODO
      preg_match("/\s+/",this.value,$match);
      this.value = $match[0];
-     this.token = Smarty_Internal_Templateparser.TP_SPACE;
+     this.token = TOKEN.TP_SPACE;
   } else {
-     this.token = Smarty_Internal_Templateparser.TP_ATTR;
+     this.token = TOKEN.TP_ATTR;
   }
 }
 id {
-  this.token = Smarty_Internal_Templateparser.TP_ID;
+  this.token = TOKEN.TP_ID;
 }
 integer {
-  this.token = Smarty_Internal_Templateparser.TP_INTEGER;
+  this.token = TOKEN.TP_INTEGER;
 }
 backtick {
-  this.token = Smarty_Internal_Templateparser.TP_BACKTICK;
+  this.token = TOKEN.TP_BACKTICK;
   this.yypopstate();
 }
 vert {
-  this.token = Smarty_Internal_Templateparser.TP_VERT;
+  this.token = TOKEN.TP_VERT;
 }
 dot {
-  this.token = Smarty_Internal_Templateparser.TP_DOT;
+  this.token = TOKEN.TP_DOT;
 }
 comma {
-  this.token = Smarty_Internal_Templateparser.TP_COMMA;
+  this.token = TOKEN.TP_COMMA;
 }
 semicolon {
-  this.token = Smarty_Internal_Templateparser.TP_SEMICOLON;
+  this.token = TOKEN.TP_SEMICOLON;
 }
 doublecolon {
-  this.token = Smarty_Internal_Templateparser.TP_DOUBLECOLON;
+  this.token = TOKEN.TP_DOUBLECOLON;
 }
 colon {
-  this.token = Smarty_Internal_Templateparser.TP_COLON;
+  this.token = TOKEN.TP_COLON;
 }
 andsym {
-  this.token = Smarty_Internal_Templateparser.TP_ANDSYM;
+  this.token = TOKEN.TP_ANDSYM;
 }
 qmark {
-  this.token = Smarty_Internal_Templateparser.TP_QMARK;
+  this.token = TOKEN.TP_QMARK;
 }
 hex {
-  this.token = Smarty_Internal_Templateparser.TP_HEX;
+  this.token = TOKEN.TP_HEX;
 }
 space {
-  this.token = Smarty_Internal_Templateparser.TP_SPACE;
+  this.token = TOKEN.TP_SPACE;
 }
 ldel if {
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-     this.token = Smarty_Internal_Templateparser.TP_LDELIF;
-     this.yypushstate(self.SMARTY);
-     this.taglineno = this.line;
-  }
+  this.tryEnterSmarty(TOKEN.TP_LDELIF);
 }
 ldel for {
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-     this.token = Smarty_Internal_Templateparser.TP_LDELFOR;
-     this.yypushstate(self.SMARTY);
-     this.taglineno = this.line;
-  }
+  this.tryEnterSmarty(TOKEN.TP_LDELFOR);
 }
 ldel foreach {
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-     this.token = Smarty_Internal_Templateparser.TP_LDELFOREACH;
-     this.yypushstate(self.SMARTY);
-     this.taglineno = this.line;
-  }
+  this.tryEnterSmarty(TOKEN.TP_LDELFOREACH);
 }
 ldel slash {
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-    this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-    this.token = Smarty_Internal_Templateparser.TP_LDELSLASH;
-    this.yypushstate(self.SMARTY);
-    this.taglineno = this.line;
-  }
+  this.tryEnterSmarty(TOKEN.TP_LDELSLASH);
 }
 ldel {
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-    this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-     this.token = Smarty_Internal_Templateparser.TP_LDEL;
-     this.yypushstate(self.SMARTY);
-     this.taglineno = this.line;
-  }
+  this.tryEnterSmarty(TOKEN.TP_LDEL);
 }
 text {
-  this.token = Smarty_Internal_Templateparser.TP_TEXT;
+  this.token = TOKEN.TP_TEXT;
 }
 */
 
 /*!lex2php
 %statename LITERAL
 ldel literal rdel {
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-    this.token = Smarty_Internal_Templateparser.TP_LITERALSTART;
-    this.yypushstate(self.LITERAL);
-  }
+    if(!this.testAutoLiteral(TOKEN.TP_LITERALSTART)){
+        this.yypushstate(self.LITERAL);
+    }
 }
 ldel slash literal rdel {
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-    this.token = Smarty_Internal_Templateparser.TP_LITERALEND;
-    this.yypopstate();
-  }
+    if(!this.testAutoLiteral(TOKEN.TP_LITERALEND)){
+        this.yypopstate();
+    }
 }
 phpstarttag {
    if(this.value == '<?' || this.value == '<?=' || this.value == '<?php'){
-    this.token = Smarty_Internal_Templateparser.TP_PHPSTARTTAG;
+    this.token = TOKEN.TP_PHPSTARTTAG;
    } else {
-    this.token = Smarty_Internal_Templateparser.TP_FAKEPHPSTARTTAG;
+    this.token = TOKEN.TP_FAKEPHPSTARTTAG;
     this.value = this.value.substr(0, 2);
    }
 }
 phpendtag {
-  this.token = Smarty_Internal_Templateparser.TP_PHPENDTAG;
+  this.token = TOKEN.TP_PHPENDTAG;
 }
 aspstarttag {
-  this.token = Smarty_Internal_Templateparser.TP_ASPSTARTTAG;
+  this.token = TOKEN.TP_ASPSTARTTAG;
 }
 aspendtag {
-  this.token = Smarty_Internal_Templateparser.TP_ASPENDTAG;
+  this.token = TOKEN.TP_ASPENDTAG;
 }
 text {
-  var nextReg = new RegExp(this.ldel + "/?literal" + this.rdel + "|<\\?|\\?>|<%|%>", "g");
+  var nextReg = new RegExp("SMARTYldel/?literalSMARTYrdel|<\\?|\\?>|<%|%>", "g");
   nextReg.lastIndex = this.counter;
 
   var to = this.dataLength,
@@ -613,176 +558,133 @@ text {
     this.compiler.trigger_template_error("missing or misspelled literal closing tag");
   }
   this.value = this.data.substring(this.counter, to);
-  this.token = Smarty_Internal_Templateparser.TP_LITERAL;
+  this.token = TOKEN.TP_LITERAL;
 }
 */
+
 /*!lex2php
 %statename DOUBLEQUOTEDSTRING
 ldel if {
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-     this.token = Smarty_Internal_Templateparser.TP_LDELIF;
-     this.yypushstate(self.SMARTY);
-     this.taglineno = this.line;
-  }
+    this.tryEnterSmarty(TOKEN.TP_LDELIF);
 }
 ldel for {
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-     this.token = Smarty_Internal_Templateparser.TP_LDELFOR;
-     this.yypushstate(self.SMARTY);
-     this.taglineno = this.line;
-  }
+    this.tryEnterSmarty(TOKEN.TP_LDELFOR);
 }
 ldel foreach {
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-     this.token = Smarty_Internal_Templateparser.TP_LDELFOREACH;
-     this.yypushstate(self.SMARTY);
-     this.taglineno = this.line;
-  }
+    this.tryEnterSmarty(TOKEN.TP_LDELFOREACH);
 }
 ldel slash {
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-    this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-    this.token = Smarty_Internal_Templateparser.TP_LDELSLASH;
-    this.yypushstate(self.SMARTY);
-    this.taglineno = this.line;
-  }
+    this.tryEnterSmarty(TOKEN.TP_LDELSLASH);
 }
 ldel {
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-    this.token = Smarty_Internal_Templateparser.TP_TEXT;
-  } else {
-     this.token = Smarty_Internal_Templateparser.TP_LDEL;
-     this.yypushstate(self.SMARTY);
-     this.taglineno = this.line;
-  }
+    this.tryEnterSmarty(TOKEN.TP_LDEL);
 }
 double_quote {
-  this.token = Smarty_Internal_Templateparser.TP_QUOTE;
+  this.token = TOKEN.TP_QUOTE;
   this.yypopstate();
 }
 backtickdollar {
-  this.token = Smarty_Internal_Templateparser.TP_BACKTICK;
+  this.token = TOKEN.TP_BACKTICK;
   this.value = substr(this.value,0,-1);
   this.yypushstate(self.SMARTY);
   this.taglineno = this.line;
 }
 dollarid {
-  this.token = Smarty_Internal_Templateparser.TP_DOLLARID;
+  this.token = TOKEN.TP_DOLLARID;
 }
 
 dollar {
-  this.token = Smarty_Internal_Templateparser.TP_TEXT;
+  this.token = TOKEN.TP_TEXT;
 }
 textdoublequoted {
-  this.token = Smarty_Internal_Templateparser.TP_TEXT;
+  this.token = TOKEN.TP_TEXT;
 }
 text {
-  if (this.mbstring_overload) {
-    $to = mb_strlen(this.data,'latin1');
-  } else {
-    $to = strlen(this.data);
-  }
-  if (this.mbstring_overload) {
-    this.value = mb_substr(this.data,this.counter,$to-this.counter,'latin1');
-  } else {
-    this.value = substr(this.data,this.counter,$to-this.counter);
-  }
-  this.token = Smarty_Internal_Templateparser.TP_TEXT;
+  //奇怪的逻辑
+  this.value = this.data.substr(this.counter);
+  this.token = TOKEN.TP_TEXT;
 }
 */
+
 /*!lex2php
 %statename CHILDBODY
 ldel strip rdel {
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     return false;
-  } else {
-    this.token = Smarty_Internal_Templateparser.TP_STRIPON;
-  }
+    if(this.isAutoLiteral()){
+        return false;
+    }else{
+        this.token = TOKEN.TP_STRIPON;
+    }
 }
 ldel slash strip rdel {
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     return false;
-  } else {
-    this.token = Smarty_Internal_Templateparser.TP_STRIPOFF;
-  }
+    if(this.isAutoLiteral()){
+        return false;
+    }else{
+        this.token = TOKEN.TP_STRIPOFF;
+    }
 }
 ldel block  {
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     return false;
-  } else {
-    this.yypopstate();
-    return true;
-  }
+    if(this.isAutoLiteral()){
+        return false;
+    }else{
+        this.yypopstate();
+        return true;
+    }
 }
 text {
-  if (this.mbstring_overload) {
-    $to = mb_strlen(this.data,'latin1');
-  } else {
-    $to = strlen(this.data);
+  var nextReg = new RegExp("SMARTYldel\s*((/)?strip\\s*SMARTYrdel|block\\s+)", "g");
+  nextReg.lastIndex = this.counter;
+
+  var to = this.dataLength,
+      result;
+  if((result = nextReg.exec(this.data)) !== null){
+    to = result.index;
   }
-  preg_match("/SMARTYldel\s*((\/)?strip\s*SMARTYrdel|block\s+)/",this.data,$match,PREG_OFFSET_CAPTURE,this.counter);
-  if (isset($match[0][1])) {
-    $to = $match[0][1];
-  }
-  if (this.mbstring_overload) {
-    this.value = mb_substr(this.data,this.counter,$to-this.counter,'latin1');
-  } else {
-    this.value = substr(this.data,this.counter,$to-this.counter);
-  }
+
+  this.value = this.data.substring(this.counter, to);
   return false;
 }
-
 */
+
 /*!lex2php
 %statename CHILDBLOCK
 
 ldel block {
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     this.token = Smarty_Internal_Templateparser.TP_BLOCKSOURCE;
-  } else {
-    this.yypopstate();
-    return true;
-  }
+    if(this.isAutoLiteral()){
+        this.token = TOKEN.TP_BLOCKSOURCE;
+    }else{
+        this.yypopstate();
+        return true;
+    }
 }
 ldel slash block {
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     this.token = Smarty_Internal_Templateparser.TP_BLOCKSOURCE;
-  } else {
-    this.yypopstate();
-    return true;
-  }
+    if(this.isAutoLiteral()){
+        this.token = TOKEN.TP_BLOCKSOURCE;
+    }else{
+        this.yypopstate();
+        return true;
+    }
 }
 ldel smartyblockchildparent {
-  if (this.smarty.auto_literal && isset(this.value[this.ldel_length]) ? strpos(" \n\t\r", this.value[this.ldel_length]) !== false : false) {
-     this.token = Smarty_Internal_Templateparser.TP_BLOCKSOURCE;
-  } else {
-    this.yypopstate();
-    return true;
-  }
+    if(this.isAutoLiteral()){
+        this.token = TOKEN.TP_BLOCKSOURCE;
+    }else{
+        this.yypopstate();
+        return true;
+    }
 }
 text {
-  if (this.mbstring_overload) {
-    $to = mb_strlen(this.data,'latin1');
+  var nextReg = new RegExp("SMARTYldel\\s*((/)?block(\\s|SMARTYrdel)|[\\$]smarty\\.block\\.(child|parent)\\s*SMARTYrdel)", "g");
+  nextReg.lastIndex = this.counter;
+
+  var to = this.dataLength,
+      result;
+  if((result = nextReg.exec(this.data)) !== null){
+    to = result.index;
   } else {
-    $to = strlen(this.data);
+    this.compiler.trigger_template_error("missing or misspelled literal closing tag");
   }
-  preg_match("/SMARTYldel\s*((\/)?block(\s|SMARTYrdel)|[\$]smarty\.block\.(child|parent)\s*SMARTYrdel)/",this.data,$match,PREG_OFFSET_CAPTURE,this.counter);
-  if (isset($match[0][1])) {
-    $to = $match[0][1];
-  }
-  if (this.mbstring_overload) {
-    this.value = mb_substr(this.data,this.counter,$to-this.counter,'latin1');
-  } else {
-    this.value = substr(this.data,this.counter,$to-this.counter);
-  }
-  this.token = Smarty_Internal_Templateparser.TP_BLOCKSOURCE;
+  this.value = this.data.substring(this.counter, to);
+  this.token = TOKEN.TP_BLOCKSOURCE;
 }
 */
     
