@@ -1281,6 +1281,16 @@ function Smarty_Internal_Templatelexer(data, compiler) {
   this.token = Smarty_Internal_Templateparser.TP_BLOCKSOURCE;
     };
 
-
+    
+    if (typeof module === "object" && typeof module.exports === "object") {
+        // For CommonJS and CommonJS-like environments where a proper window is present,
+        // execute the factory and get jQuery
+        // For environments that do not inherently posses a window with a document
+        // (such as Node.js), expose a jQuery-making factory as module.exports
+        // This accentuates the need for the creation of a real window
+        // e.g. var jQuery = require("jquery")(window);
+        // See ticket #14549 for more info
+        module.exports = self;
+    }
 })(Smarty_Internal_Templatelexer, Smarty_Internal_Templatelexer.prototype);
 // vim600: syn=javascript
