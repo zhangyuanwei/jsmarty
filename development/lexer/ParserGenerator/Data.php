@@ -1642,7 +1642,7 @@ class PHP_ParserGenerator_Data
 
         for ($rp = $this->rule; $rp; $rp = $rp->next) {
             if ($rp->code) {
-                $this->translate_code($rp);
+                $this->translate_js_code($rp);
             }
         }
 
@@ -2267,10 +2267,10 @@ class PHP_ParserGenerator_Data
         /* Generate code to do the reduce action */
         if ($rp->code) {
             $this->tplt_linedir($out, $rp->line, $this->filename);
-            fwrite($out, "    proto.yy_r$rp->index = function(){/*" . $rp->code);
+            fwrite($out, "    proto.yy_r$rp->index = function(){" . $rp->code);
             $linecnt += count(explode("\n", $rp->code)) - 1;
             $lineno += 3 + $linecnt;
-            fwrite($out, "    */};\n");
+            fwrite($out, "    };\n");
             $this->tplt_linedir($out, $lineno, $this->outname);
         } /* End if( rp->code ) */
     }
@@ -2331,6 +2331,101 @@ class PHP_ParserGenerator_Data
         $z .= substr($zText, 0, $n);
 
         return $z;
+    }
+    
+    /**
+     * zCode is a string that is the action associated with a rule.  Expand
+     * the symbols in this string so that the refer to elements of the parser
+     * stack.
+     */
+    public function translate_js_code(PHP_ParserGenerator_Rule $rp)
+    {
+        $lhsused = 0;    /* True if the LHS element has been used */
+        $used = array();   /* True for each RHS element which is used */
+
+        for ($i = 0; $i < $rp->nrhs; $i++) {
+            $used[$i] = 0;
+        }
+
+        $this->append_str('', 0);
+        for ($i = 0; $i < strlen($rp->code); $i++) {
+            $cp = $rp->code[$i];
+            if (preg_match('/[A-Za-z]/', $cp) &&
+                 ($i === 0 || (!preg_match('/[A-Za-z0-9_]/', $rp->code[$i - 1])))) {
+                //*xp = 0;
+                // previous line is in essence a temporary substr, so
+                // we will simulate it
+                $test = substr($rp->code, $i);
+                preg_match('/[A-Za-z0-9_]+/', $test, $matches);
+                $tempcp = $matches[0];
+                $j = strlen($tempcp) + $i;
+                if ($rp->lhsalias && $tempcp == $rp->lhsalias) {
+                    $this->append_str("this._retvalue", 0);
+                    $cp = $rp->code[$j];
+                    $i = $j;
+                    $lhsused = 1;
+                } else {
+                    for ($ii = 0; $ii < $rp->nrhs; $ii++) {
+                        if ($rp->rhsalias[$ii] && $tempcp == $rp->rhsalias[$ii]) {
+                            if ($ii !== 0 && $rp->code[$ii - 1] == '@') {
+                                /* If the argument is of the form @X then substitute
+                                ** the token number of X, not the value of X */
+                                $this->append_str("this.yystack[this.yyidx + " .
+                                    ($ii - $rp->nrhs + 1) . "].major", -1);
+                            } else {
+                                $sp = $rp->rhs[$ii];
+                                if ($sp->type == PHP_ParserGenerator_Symbol::MULTITERMINAL) {
+                                    $dtnum = $sp->subsym[0]->dtnum;
+                                } else {
+                                    $dtnum = $sp->dtnum;
+                                }
+                                $this->append_str("this.yystack[this.yyidx + " .
+                                    ($ii - $rp->nrhs + 1) . "].minor", 0);
+                            }
+                            $cp = $rp->code[$j];
+                            $i = $j;
+                            $used[$ii] = 1;
+                            break;
+                        }
+                    }
+                }
+            }
+            $this->append_str($cp, 1);
+        } /* End loop */
+
+        /* Check to make sure the LHS has been used */
+        if ($rp->lhsalias && !$lhsused) {
+            PHP_ParserGenerator::ErrorMsg($this->filename, $rp->ruleline,
+                "Label \"%s\" for \"%s(%s)\" is never used.",
+                $rp->lhsalias, $rp->lhs->name, $rp->lhsalias);
+                $this->errorcnt++;
+        }
+
+        /* Generate destructor code for RHS symbols which are not used in the
+        ** reduce code */
+        for ($i = 0; $i < $rp->nrhs; $i++) {
+            if ($rp->rhsalias[$i] && !isset($used[$i])) {
+                PHP_ParserGenerator::ErrorMsg($this->filename, $rp->ruleline,
+                    "Label %s for \"%s(%s)\" is never used.",
+                    $rp->rhsalias[$i], $rp->rhs[$i]->name, $rp->rhsalias[$i]);
+                $this->errorcnt++;
+            } elseif ($rp->rhsalias[$i] == 0) {
+                if ($rp->rhs[$i]->type == PHP_ParserGenerator_Symbol::TERMINAL) {
+                    $hasdestructor = $this->tokendest != 0;
+                } else {
+                    $hasdestructor = $this->vardest !== 0 || $rp->rhs[$i]->destructor !== 0;
+                }
+                if ($hasdestructor) {
+                    $this->append_str("  \$this->yy_destructor(" .
+                        ($rp->rhs[$i]->index) . ", \$this->yystack[\$this->yyidx + " .
+                        ($i - $rp->nrhs + 1) . "]->minor);\n", 0);
+                } else {
+                    /* No destructor defined for this term */
+                }
+            }
+        }
+        $cp = $this->append_str('', 0);
+        $rp->code = $cp;
     }
 
     /**
