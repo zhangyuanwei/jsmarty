@@ -1632,7 +1632,8 @@ class PHP_ParserGenerator_Data
         */
 
         for ($rp = $this->rule; $rp; $rp = $rp->next) {
-            fprintf($out, "  { 'lhs' : %d, 'rhs' : %d },\n",
+            //fprintf($out, "  { 'lhs' : %d, 'rhs' : %d },\n",
+            fprintf($out, "  [ %d, %d ],\n",
                 $rp->lhs->index, $rp->nrhs);
             $lineno++;
         }
@@ -1690,7 +1691,7 @@ class PHP_ParserGenerator_Data
 
         /* Generate javascript init function arguments */
 
-        fwrite($out, "($this->js_classname, $this->js_classname.prototype)\n");
+        fwrite($out, "($this->js_classname, $this->js_classname.prototype, " . json_encode($this->js_classname) . ")\n");
         $lineno++;
         $this->tplt_xfer($this->name, $in, $out, $lineno);
 
@@ -2266,7 +2267,9 @@ class PHP_ParserGenerator_Data
 
         /* Generate code to do the reduce action */
         if ($rp->code) {
+
             $this->tplt_linedir($out, $rp->line, $this->filename);
+
             fwrite($out, "    proto.yy_r$rp->index = function(){" . $rp->code);
             $linecnt += count(explode("\n", $rp->code)) - 1;
             $lineno += 3 + $linecnt;
@@ -2370,8 +2373,9 @@ class PHP_ParserGenerator_Data
                             if ($ii !== 0 && $rp->code[$ii - 1] == '@') {
                                 /* If the argument is of the form @X then substitute
                                 ** the token number of X, not the value of X */
-                                $this->append_str("this.yystack[this.yyidx + " .
-                                    ($ii - $rp->nrhs + 1) . "].major", -1);
+                                $n = $ii - $rp->nrhs + 1;
+                                $this->append_str("this.yystack[this.yyidx" .
+                                    ($n>0?"+$n":($n<0?"$n":"")) . "].major", -1);
                             } else {
                                 $sp = $rp->rhs[$ii];
                                 if ($sp->type == PHP_ParserGenerator_Symbol::MULTITERMINAL) {
@@ -2379,8 +2383,9 @@ class PHP_ParserGenerator_Data
                                 } else {
                                     $dtnum = $sp->dtnum;
                                 }
-                                $this->append_str("this.yystack[this.yyidx + " .
-                                    ($ii - $rp->nrhs + 1) . "].minor", 0);
+                                $n = $ii - $rp->nrhs + 1;
+                                $this->append_str("this.yystack[this.yyidx" .
+                                    ($n>0?"+$n":($n<0?"$n":"")) . "].minor", 0);
                             }
                             $cp = $rp->code[$j];
                             $i = $j;

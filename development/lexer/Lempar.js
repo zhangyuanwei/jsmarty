@@ -1,4 +1,5 @@
 "use strict";
+(function(global){
 ///*- include_code
 %%
 //*/
@@ -37,7 +38,7 @@ function ParserClass()
     return _constructor.apply(this, arguments);
 }
 
-(function(self, proto) {
+(function(self, proto, className) {
 
     function isset(obj, key) {
         return obj.hasOwnProperty(String(key));
@@ -154,10 +155,10 @@ function ParserClass()
                         return array_unique(expected);
                     }
                     var yyruleno = yyact - self.YYNSTATE;
-                    this.yyidx -= self.yyRuleInfo[yyruleno]['rhs'];
+                    this.yyidx -= self.yyRuleInfo[yyruleno][1];
                     var nextstate = this.yy_find_reduce_action(
                         this.yystack[this.yyidx].stateno,
-                        self.yyRuleInfo[yyruleno]['lhs']);
+                        self.yyRuleInfo[yyruleno][0]);
                     if (isset(self.yyExpectedTokens[nextstate])) {
                         expected = array_merge(expected, self.yyExpectedTokens[nextstate]);
                         if (in_array(token,
@@ -173,7 +174,7 @@ function ParserClass()
                         this.yyidx++;
                         var x = new ParseyyStackEntry();
                         x.stateno = nextstate;
-                        x.major = self.yyRuleInfo[yyruleno]['lhs'];
+                        x.major = self.yyRuleInfo[yyruleno][0];
                         this.yystack[this.yyidx] = x;
                         continue next;
                     } else if (nextstate == self.YYNSTATE + self.YYNRULE + 1) {
@@ -225,10 +226,10 @@ function ParserClass()
                         return true;
                     }
                     var yyruleno = yyact - self.YYNSTATE;
-                    this.yyidx -= self.yyRuleInfo[yyruleno]['rhs'];
+                    this.yyidx -= self.yyRuleInfo[yyruleno][1];
                     var nextstate = this.yy_find_reduce_action(
                         this.yystack[this.yyidx].stateno,
-                        self.yyRuleInfo[yyruleno]['lhs']);
+                        self.yyRuleInfo[yyruleno][0]);
                     if (isset(self.yyExpectedTokens, nextstate) &&
                         in_array(token, self.yyExpectedTokens[nextstate], true)) {
                         this.yyidx = yyidx;
@@ -241,7 +242,7 @@ function ParserClass()
                         this.yyidx++;
                         var x = new ParseyyStackEntry();
                         x.stateno = nextstate;
-                        x.major = self.yyRuleInfo[yyruleno]['lhs'];
+                        x.major = self.yyRuleInfo[yyruleno][0];
                         this.yystack[this.yyidx] = x;
                         continue next;
                     } else if (nextstate == self.YYNSTATE + self.YYNRULE + 1) {
@@ -370,8 +371,8 @@ function ParserClass()
             yy_lefthand_side = this._retvalue;
         }
 
-        var yygoto = self.yyRuleInfo[yyruleno]['lhs'];
-        var yysize = self.yyRuleInfo[yyruleno]['rhs'];
+        var yygoto = self.yyRuleInfo[yyruleno][0];
+        var yysize = self.yyRuleInfo[yyruleno][1];
         this.yyidx -= yysize;
 
         for (var i = yysize; i; i--) {
@@ -503,9 +504,12 @@ function ParserClass()
         // e.g. var jQuery = require("jquery")(window);
         // See ticket #14549 for more info
         module.exports = self;
+    }else{
+        global[className] = self;
     }
 })
 //*- bind arguments
 %%
 //*/
 ;
+})(this);
