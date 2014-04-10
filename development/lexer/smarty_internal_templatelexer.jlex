@@ -8,6 +8,7 @@
  * @modifier zhangyuanwei
  */
 
+(function(global){
 function preg_quote(str) {
     return String(str)
         .replace(/[.\\+*?\[\^\]$(){}=!<>|:\-]/g, "\\$&");
@@ -585,7 +586,7 @@ double_quote {
 }
 backtickdollar {
   this.token = TOKEN.TP_BACKTICK;
-  this.value = substr(this.value,0,-1);
+  this.value = this.value.substr(0,-1);
   this.yypushstate(self.SMARTY);
   this.taglineno = this.line;
 }
@@ -697,6 +698,9 @@ text {
         // e.g. var jQuery = require("jquery")(window);
         // See ticket #14549 for more info
         module.exports = self;
+    }else{
+        global["Smarty_Internal_Templatelexer"] = self;
     }
 })(Smarty_Internal_Templatelexer, Smarty_Internal_Templatelexer.prototype);
+})(this);
 // vim600: syn=javascript
