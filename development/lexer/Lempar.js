@@ -152,7 +152,8 @@ function ParserClass()
                         this.yystack = stack;
                         // too much recursion prevents proper detection
                         // so give up
-                        return array_unique(expected);
+                        //return array_unique(expected);
+                        return expected;
                     }
                     var yyruleno = yyact - self.YYNSTATE;
                     this.yyidx -= self.yyRuleInfo[yyruleno][1];
@@ -166,7 +167,8 @@ function ParserClass()
                             this.yyidx = yyidx;
                             this.yystack = stack;
 
-                            return array_unique(expected);
+                            //return array_unique(expected);
+                            return expected;
                         }
                     }
                     if (nextstate < self.YYNSTATE) {
@@ -183,7 +185,8 @@ function ParserClass()
                         // the last token was just ignored, we can't accept
                         // by ignoring input, this is in essence ignoring a
                         // syntax error!
-                        return array_unique(expected);
+                        //return array_unique(expected);
+                        return expected;
                     } else if (nextstate === self.YY_NO_ACTION) {
                         this.yyidx = yyidx;
                         this.yystack = stack;
@@ -199,7 +202,8 @@ function ParserClass()
         this.yyidx = yyidx;
         this.yystack = stack;
 
-        return array_unique(expected);
+        //return array_unique(expected);
+        return expected;
     };
 
     proto.yy_is_expected_token = function(token) {
