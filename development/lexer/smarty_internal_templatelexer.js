@@ -8,6 +8,7 @@
  * @modifier zhangyuanwei
  */
 
+(function(global){
 function preg_quote(str) {
     return String(str)
         .replace(/[.\\+*?\[\^\]$(){}=!<>|:\-]/g, "\\$&");
@@ -948,7 +949,7 @@ var TOKEN = {};
     {
 
   this.token = TOKEN.TP_BACKTICK;
-  this.value = substr(this.value,0,-1);
+  this.value = this.value.substr(0,-1);
   this.yypushstate(self.SMARTY);
   this.taglineno = this.line;
     };
@@ -1190,14 +1191,10 @@ var TOKEN = {};
 
     
     if (typeof module === "object" && typeof module.exports === "object") {
-        // For CommonJS and CommonJS-like environments where a proper window is present,
-        // execute the factory and get jQuery
-        // For environments that do not inherently posses a window with a document
-        // (such as Node.js), expose a jQuery-making factory as module.exports
-        // This accentuates the need for the creation of a real window
-        // e.g. var jQuery = require("jquery")(window);
-        // See ticket #14549 for more info
         module.exports = self;
+    }else{
+        global["Smarty_Internal_Templatelexer"] = self;
     }
 })(Smarty_Internal_Templatelexer, Smarty_Internal_Templatelexer.prototype);
+})(this);
 // vim600: syn=javascript
